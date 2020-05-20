@@ -16,5 +16,5 @@ Including another URLconf
 from django.urls import path, include
 
 urlpatterns = [
-    path('finappservice/', include('finappservice.urls')),
+    path('finappservice/v1/', include('finappservice.urls')),
 ]
