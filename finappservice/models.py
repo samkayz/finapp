@@ -31,3 +31,44 @@ class Office(models.Model):
 
     class Meta:
         db_table = 'office'
+
+
+class Customer(models.Model):
+    customerId = models.CharField(max_length=255, null=True, blank=True)
+    officeId = models.IntegerField()
+    firstname = models.CharField(max_length=255)
+    lastname = models.CharField(max_length=255)
+    mnemonic = models.CharField(max_length=100)
+    activationDate = models.CharField(max_length=255, null=True, blank=True)
+    submittedDate = models.CharField(max_length=255)
+    active = models.BooleanField()
+
+    class Meta:
+        db_table = 'customer'
+
+
+class Addresstable(models.Model):
+    userId = models.IntegerField()
+    addressLine = models.TextField()
+    street = models.CharField(max_length=255)
+    landmark = models.CharField(max_length=255)
+    country = models.CharField(max_length=255)
+    state = models.CharField(max_length=255)
+    district = models.CharField(max_length=255)
+    mobileNo = models.CharField(max_length=255)
+    mnemonic = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'addresstable'
+
+class IdentificationId(models.Model):
+    userId = models.IntegerField()
+    modeOfId = models.CharField(max_length=255)
+    idNo = models.CharField(max_length=255)
+    mnemonic = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'identification_id'
+
+
+    
