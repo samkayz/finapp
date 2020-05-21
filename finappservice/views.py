@@ -10,7 +10,7 @@ import random
 import string
 import uuid
 from .models import *
-from .function import customerId
+from .function import *
 
 
 @api_view(['POST'])
@@ -194,3 +194,123 @@ def customerById(request, customerId):
         }
     }
     return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def acctCategory(request):
+    name = request.data.get('name')
+    accountId = request.data.get('accountId')
+
+    data = {
+        "name": name,
+        "accountId": accountId
+    }
+    serializer = AccountCategorySerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def allAcctCategory(request):
+    try:
+        show = AccountCategory.objects.filter()
+    except AccountCategory.DoesNotExist:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    
+    serializer = AccountCategorySerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def openAccount(request):
+    base_date_time = datetime.now()
+    openOn = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+    customerId = request.data.get('customerId')
+    accountTypeId = request.data.get('accountTypeId')
+    active = request.data.get('active')
+
+    try:
+        cust = Customer.objects.all().get(customerId=customerId)
+        actype = AccountCategory.objects.all().get(accountId=accountTypeId)
+    except:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    if accountTypeId == 1:
+        newAccount = AccountNumber()
+        data = {
+            "customerId": customerId,
+            "mnemonic": cust.mnemonic,
+            "accountName": cust.firstname + ' ' + cust.lastname,
+            "accounNumber": newAccount,
+            "ledgerBalance": 0,
+            "workingBalance": 0,
+            "accountTypeId": actype.accountId,
+            "accountType": actype.name,
+            "active": active,
+            "createdBy": request.user.first_name + ' ' + request.user.last_name,
+            "openOn": openOn
+        }
+        serializer = AccountSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    elif accountTypeId == 2:
+        newAccount = AccountNumber()
+        data = {
+            "customerId": customerId,
+            "mnemonic": cust.mnemonic,
+            "accountName": cust.firstname + ' ' + cust.lastname,
+            "accounNumber": newAccount,
+            "ledgerBalance": 0,
+            "workingBalance": 0,
+            "accountTypeId": actype.accountId,
+            "accountType": actype.name,
+            "active": active,
+            "createdBy": request.user.first_name + ' ' + request.user.last_name,
+            "openOn": openOn
+        }
+        serializer = AccountSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+    else:
+        newAccount = AccountNumber()
+        data = {
+            "customerId": customerId,
+            "mnemonic": cust.mnemonic,
+            "accountName": cust.firstname + ' ' + cust.lastname,
+            "accounNumber": newAccount,
+            "ledgerBalance": 0,
+            "workingBalance": 0,
+            "accountTypeId": actype.accountId,
+            "accountType": actype.name,
+            "active": active,
+            "createdBy": request.user.first_name + ' ' + request.user.last_name,
+            "openOn": openOn
+        }
+        serializer = AccountSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def customerAccount(request, customerId):
+
+    try:
+        show = Account.objects.filter(customerId=customerId)
+    except Account.DoesNotExist:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = AccountSerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+

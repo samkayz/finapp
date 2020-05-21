@@ -71,4 +71,29 @@ class IdentificationId(models.Model):
         db_table = 'identification_id'
 
 
+class Account(models.Model):
+    customerId = models.CharField(max_length=255)
+    mnemonic = models.CharField(max_length=255)
+    accountName = models.TextField()
+    accounNumber = models.CharField(max_length=255)
+    ledgerBalance = models.FloatField()
+    workingBalance = models.FloatField()
+    accountTypeId = models.IntegerField()
+    accountType = models.CharField(max_length=255)
+    active = models.BooleanField()
+    createdBy = models.CharField(max_length=255)
+    openOn = models.CharField(max_length=255)
+    
+    class Meta:
+        db_table = 'account'
+
+
+class AccountCategory(models.Model):
+    name = models.CharField(max_length=255)
+    accountId = models.IntegerField()
+     
+    class Meta:
+        db_table = 'accountCategory'   
+
+
     

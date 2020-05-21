@@ -38,3 +38,14 @@ class IdentificationIdSerializer(serializers.ModelSerializer):
     class Meta:
         model = IdentificationId
         fields = "__all__"
+
+class AccountCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountCategory
+        fields = "__all__"
+
+
+class AccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = "__all__"

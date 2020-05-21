@@ -12,4 +12,8 @@ urlpatterns = [
     path('createCustomer', views.createCustomer),
     path('allCustomer', views.allCustomer),
     path('customerById/<customerId>', views.customerById),
+    path('acctCategory', views.acctCategory),
+    path('allAcctCategory', views.allAcctCategory),
+    path('openAccount', views.openAccount),
+    path('customerAccount/<customerId>', views.customerAccount),
 ]
