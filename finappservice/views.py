@@ -314,3 +314,87 @@ def customerAccount(request, customerId):
     return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def fundTransfer(request):
+    base_date_time = datetime.now()
+    openOn = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+    debitAccount = request.data.get('debitAccount')
+    creditAccount = request.data.get('creditAccount')
+    amount = request.data.get('amount')
+    comment = request.data.get('comment')
+    newId = ftId()
+
+    checkAccount = Account.objects.values('workingBalance').get(accounNumber=debitAccount)['workingBalance']
+    if checkAccount < float(amount):
+        error = {
+            "message": "Insufficient Account Balance"
+        }
+        return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
+    else:
+        # credit Account Information
+        crdAcct = Account.objects.all().get(accounNumber=creditAccount)
+
+        # Debit Account Details
+        dbtAcct = Account.objects.all().get(accounNumber=debitAccount)
+
+        # Update sender previous balance
+        Account.objects.filter(accounNumber=debitAccount).update(previousBalance=checkAccount)
+
+        # Update receiver's previous Balance
+        Account.objects.filter(accounNumber=creditAccount).update(previousBalance=crdAcct.workingBalance)
+
+        # Debit Sender
+        NewAmount = float(amount)
+        New = dbtAcct.workingBalance - NewAmount
+
+        Account.objects.filter(accounNumber=debitAccount).update(workingBalance=New)
+
+
+        # Credit Receiver
+        New2 = crdAcct.workingBalance + NewAmount
+        Account.objects.filter(accounNumber=creditAccount).update(workingBalance=New2)
+
+        tdata = {
+            "transId": newId,
+            "transDate": openOn,
+            "transAmount": amount,
+            "senderName": dbtAcct.accountName,
+            "senderAccount": dbtAcct.accounNumber,
+            "receiverName": crdAcct.accountName,
+            "receiverAccount": crdAcct.accounNumber,
+            "comment": comment
+        }
+
+        serializer = TransactionSerializer(data=tdata)
+        if serializer.is_valid():
+            serializer.save()
+
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def allTrasaction(request):
+    try:
+        show = TransactionHistory.objects.filter()
+    except TransactionHistory.DoesNotExist:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = TransactionSerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def transById(request, transId):
+    try:
+        show = TransactionHistory.objects.filter(transId=transId)
+    except TransactionHistory.DoesNotExist:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = TransactionSerializer(instance=show, many=True)
+
+    return Response(data=serializer.data, status=status.HTTP_200_OK)

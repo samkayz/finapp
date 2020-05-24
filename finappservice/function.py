@@ -20,4 +20,14 @@ def AccountNumber():
     acct_int = int(AccountNumberId)
     newAccountNumber = acct_int + 1
     return newAccountNumber
-    
+
+
+def ftId():
+    lastId = TransactionHistory.objects.all().order_by('id').last()
+    if not lastId:
+        return 'FT10000000'
+    fundTransferId = lastId.transId
+    tId = int(fundTransferId.split('FT')[-1])
+    newTransId = tId + 1
+    newTrans = 'FT' + str(newTransId)
+    return newTrans

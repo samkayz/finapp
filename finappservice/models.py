@@ -76,7 +76,7 @@ class Account(models.Model):
     mnemonic = models.CharField(max_length=255)
     accountName = models.TextField()
     accounNumber = models.CharField(max_length=255)
-    ledgerBalance = models.FloatField()
+    previousBalance = models.FloatField()
     workingBalance = models.FloatField()
     accountTypeId = models.IntegerField()
     accountType = models.CharField(max_length=255)
@@ -93,7 +93,22 @@ class AccountCategory(models.Model):
     accountId = models.IntegerField()
      
     class Meta:
-        db_table = 'accountCategory'   
+        db_table = 'accountCategory'
+
+
+class TransactionHistory(models.Model):
+    transId = models.CharField(max_length=255)
+    transDate = models.CharField(max_length=255)
+    transAmount = models.FloatField()
+    senderName = models.CharField(max_length=255)
+    senderAccount = models.CharField(max_length=255)
+    receiverName = models.CharField(max_length=255)
+    receiverAccount = models.CharField(max_length=255)
+    comment = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'transaction_history'
+
 
 
     

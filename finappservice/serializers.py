@@ -49,3 +49,9 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = "__all__"
+
+
+class TransactionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TransactionHistory
+        fields = "__all__"

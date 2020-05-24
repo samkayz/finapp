@@ -16,4 +16,7 @@ urlpatterns = [
     path('allAcctCategory', views.allAcctCategory),
     path('openAccount', views.openAccount),
     path('customerAccount/<customerId>', views.customerAccount),
+    path('fundTransfer', views.fundTransfer),
+    path('allTrasaction', views.allTrasaction),
+    path('transById/<transId>', views.transById),
 ]
