@@ -547,52 +547,77 @@ def operate(request):
         if cdataserializer.is_valid():
             cdataserializer.save()
     else:
-        # Get Customer Balance
+        if amt > c_acct.workingBalance:
+            error = {
+                "message": "Insufficient Balance"
+            }
+            return Response(data=error, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            # Get Customer Balance
 
-        #Update Previous Balance
-        pbal = c_acct.workingBalance
-        Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
+            #Update Previous Balance
+            pbal = c_acct.workingBalance
+            Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
 
-        # Update Working Balance 
-        wbal = c_acct.workingBalance - amt
-        Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
+            # Update Working Balance 
+            wbal = c_acct.workingBalance - amt
+            Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
 
-        #Update Teller Balance
-        tbal = t_bal.bal - amt
-        TellerBalance.objects.filter(tellerId=tellerId).update(bal=tbal)
+            #Update Teller Balance
+            tbal = t_bal.bal - amt
+            TellerBalance.objects.filter(tellerId=tellerId).update(bal=tbal)
 
-        #Update Teller Transaction History
+            #Update Teller Transaction History
 
-        tdata = {
-            "user_id": t_bal.user_id,
-            "tellerId": t_bal.tellerId,
-            "transAmount": amt,
-            "transAccount": acctNo,
-            "transType": "DR",
-            "transDate": tday,
-            "tellerName": tdetail.tellerName
-        }
-        tdataserializer = TellerTransactionHistorySerializer(data=tdata)
-        if tdataserializer.is_valid():
-            tdataserializer.save()
+            tdata = {
+                "user_id": t_bal.user_id,
+                "tellerId": t_bal.tellerId,
+                "transAmount": amt,
+                "transAccount": acctNo,
+                "transType": "DR",
+                "transDate": tday,
+                "tellerName": tdetail.tellerName
+            }
+            tdataserializer = TellerTransactionHistorySerializer(data=tdata)
+            if tdataserializer.is_valid():
+                tdataserializer.save()
 
-        #Update Customer History
-        cdata = {
-            "transId": tranId,
-            "transDate": tday,
-            "transAmount": amt,
-            "senderName": senderName,
-            "receiverName": c_acct.accountName,
-            "receiverAccount": acctNo,
-            "comment": comment
-        }
-        cdataserializer = TransactionSerializer(data=cdata)
-        if cdataserializer.is_valid():
-            cdataserializer.save()
+            #Update Customer History
+            cdata = {
+                "transId": tranId,
+                "transDate": tday,
+                "transAmount": amt,
+                "senderName": senderName,
+                "receiverName": c_acct.accountName,
+                "receiverAccount": acctNo,
+                "comment": comment
+            }
+            cdataserializer = TransactionSerializer(data=cdata)
+            if cdataserializer.is_valid():
+                cdataserializer.save()
 
     suc = {
         "message": "Transaction Successful"
     }
     return Response(data=suc, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def enquiry(request):
+    acctNo = request.data.get('accountNumber')
+    transDate = request.data.get('transDate')
+    transId = request.data.get('transId')
+
+    try:
+        show = TransactionHistory.objects.filter(Q(receiverAccount=acctNo) | Q(transDate=transDate) | Q(transId=transId))
+    except:
+        error = {
+            "message": "Invalid parameter or Detail not Found"
+        }
+        return Response(data=error, status=status.HTTP_401_UNAUTHORIZED)
+    
+    serializer = TransactionSerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 

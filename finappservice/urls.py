@@ -23,4 +23,5 @@ urlpatterns = [
     path('openBal', views.openBal),
     path('checkCurrentTellerBal/<telleId>', views.checkCurrentTellerBal),
     path('operate', views.operate),
+    path('enquiry', views.enquiry),
 ]
