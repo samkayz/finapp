@@ -31,3 +31,13 @@ def ftId():
     newTransId = tId + 1
     newTrans = 'FT' + str(newTransId)
     return newTrans
+
+
+def TellerId():
+    last_id = Teller.objects.all().order_by('id').last()
+    if not last_id:
+        return '1000'
+    tellerIdNo = last_id.tellerId
+    tellerIdNo_int = int(tellerIdNo)
+    newId = tellerIdNo_int + 1
+    return newId

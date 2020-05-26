@@ -3,6 +3,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.response import Response
+from django.contrib.auth import get_user_model
+UserModel = get_user_model()
 from django.db.models import Q
 from .serializers import *
 from datetime import datetime
@@ -398,3 +400,199 @@ def transById(request, transId):
     serializer = TransactionSerializer(instance=show, many=True)
 
     return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def assignTeller(request):
+    tellerId = TellerId()
+    user_id = request.data.get('userId')
+
+    try:
+        all_ = UserModel.objects.all().get(id=user_id)
+    except:
+        error = {
+            "message": "UserID is not a registered User"
+        }
+        return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
+
+    if Teller.objects.filter(user_id=user_id).exists():
+        error = {
+            "message": "User already added to Teller"
+        }
+        return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
+    else:
+        data = {
+            "user_id": user_id,
+            "tellerId": tellerId,
+            "tellerName": all_.first_name + ' ' + all_.last_name
+        }
+        serializer = TellerSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def openBal(request):
+    base_date_time = datetime.now()
+    openOn = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+    tellerId = request.data.get('tellerId')
+    openBal = request.data.get('openBal')
+
+    try:
+        tid = Teller.objects.all().get(tellerId=tellerId)
+    except expression as identifier:
+        error = {
+            "message": "TellerId not Found"
+        }
+        return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
+
+    data = {
+        "user_id": tid.user_id,
+        "tellerId": tid.tellerId,
+        "openDate": openOn,
+        "openBal": openBal
+    }
+    serializer = TellerBalanceSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+    return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def checkCurrentTellerBal(request, telleId):
+    base_date_time = datetime.now()
+    today = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+
+    try:
+        show = TellerBalance.objects.filter(tellerId=telleId, openDate=today)
+    except:
+        error = {
+            "message": "Wrong TellerId"
+        }
+        return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
+    serializer = TellerBalanceSerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def operate(request):
+    U = 10
+    res1 = ''.join(random.choices(string.digits, k=U))
+    txn1 = str(res1)
+    tranId = "TR|" + txn1
+    base_date_time = datetime.now()
+    tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+    acctNo = request.data.get('accountNumber')
+    transType = request.data.get('transType')
+    amount = request.data.get('amount')
+    tellerId = request.data.get('tellerId')
+    senderName = request.data.get('senderName')
+    receiverName = request.data.get('receiverName')
+    comment = request.data.get('comment')
+
+    amt = float(amount)
+    c_acct = Account.objects.all().get(accounNumber=acctNo)
+    #Teller Detail
+    tdetail = Teller.objects.all().get(tellerId=tellerId)
+    t_bal = TellerBalance.objects.all().get(tellerId=tellerId)
+
+    if transType == "CR":
+        # Get Customer Balance
+
+        #Update Previous Balance
+        pbal = c_acct.workingBalance
+        Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
+
+        # Update Working Balance 
+        wbal = c_acct.workingBalance + amt
+        Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
+
+        #Update Teller Balance
+        tbal = t_bal.bal + amt
+        TellerBalance.objects.filter(tellerId=tellerId).update(bal=tbal)
+
+        #Update Teller Transaction History
+
+        tdata = {
+            "user_id": t_bal.user_id,
+            "tellerId": t_bal.tellerId,
+            "transAmount": amt,
+            "transAccount": acctNo,
+            "transType": "CR",
+            "transDate": tday,
+            "tellerName": tdetail.tellerName
+        }
+        tdataserializer = TellerTransactionHistorySerializer(data=tdata)
+        if tdataserializer.is_valid():
+            tdataserializer.save()
+
+        #Update Customer History
+        cdata = {
+            "transId": tranId,
+            "transDate": tday,
+            "transAmount": amt,
+            "senderName": senderName,
+            "receiverName": c_acct.accountName,
+            "receiverAccount": acctNo,
+            "comment": comment
+        }
+        cdataserializer = TransactionSerializer(data=cdata)
+        if cdataserializer.is_valid():
+            cdataserializer.save()
+    else:
+        # Get Customer Balance
+
+        #Update Previous Balance
+        pbal = c_acct.workingBalance
+        Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
+
+        # Update Working Balance 
+        wbal = c_acct.workingBalance - amt
+        Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
+
+        #Update Teller Balance
+        tbal = t_bal.bal - amt
+        TellerBalance.objects.filter(tellerId=tellerId).update(bal=tbal)
+
+        #Update Teller Transaction History
+
+        tdata = {
+            "user_id": t_bal.user_id,
+            "tellerId": t_bal.tellerId,
+            "transAmount": amt,
+            "transAccount": acctNo,
+            "transType": "DR",
+            "transDate": tday,
+            "tellerName": tdetail.tellerName
+        }
+        tdataserializer = TellerTransactionHistorySerializer(data=tdata)
+        if tdataserializer.is_valid():
+            tdataserializer.save()
+
+        #Update Customer History
+        cdata = {
+            "transId": tranId,
+            "transDate": tday,
+            "transAmount": amt,
+            "senderName": senderName,
+            "receiverName": c_acct.accountName,
+            "receiverAccount": acctNo,
+            "comment": comment
+        }
+        cdataserializer = TransactionSerializer(data=cdata)
+        if cdataserializer.is_valid():
+            cdataserializer.save()
+
+    suc = {
+        "message": "Transaction Successful"
+    }
+    return Response(data=suc, status=status.HTTP_200_OK)
+
+

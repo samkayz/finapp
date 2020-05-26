@@ -19,4 +19,8 @@ urlpatterns = [
     path('fundTransfer', views.fundTransfer),
     path('allTrasaction', views.allTrasaction),
     path('transById/<transId>', views.transById),
+    path('assignTeller', views.assignTeller),
+    path('openBal', views.openBal),
+    path('checkCurrentTellerBal/<telleId>', views.checkCurrentTellerBal),
+    path('operate', views.operate),
 ]

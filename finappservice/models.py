@@ -100,14 +100,54 @@ class TransactionHistory(models.Model):
     transId = models.CharField(max_length=255)
     transDate = models.CharField(max_length=255)
     transAmount = models.FloatField()
-    senderName = models.CharField(max_length=255)
-    senderAccount = models.CharField(max_length=255)
-    receiverName = models.CharField(max_length=255)
-    receiverAccount = models.CharField(max_length=255)
-    comment = models.CharField(max_length=255)
+    senderName = models.CharField(max_length=255, blank=True)
+    senderAccount = models.CharField(max_length=255, blank=True)
+    receiverName = models.CharField(max_length=255, blank=True)
+    receiverAccount = models.CharField(max_length=255, blank=True)
+    comment = models.CharField(max_length=255, blank=True)
 
     class Meta:
         db_table = 'transaction_history'
+
+
+class Teller(models.Model):
+    user_id = models.IntegerField()
+    tellerId = models.CharField(max_length=100)
+    tellerName = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'teller'
+
+
+class TellerBalance(models.Model):
+    user_id = models.IntegerField()
+    tellerId = models.CharField(max_length=100)
+    openDate = models.CharField(max_length=100)
+    openBal = models.FloatField()
+    bal = models.FloatField()
+    closeDate = models.CharField(max_length=100, blank=True)
+    closeBal = models.CharField(max_length=255, blank=True)
+    totaltran = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'teller_balance'
+
+
+class TellerTransactionHistory(models.Model):
+    user_id = models.IntegerField()
+    tellerId = models.CharField(max_length=100)
+    transAmount = models.FloatField()
+    transAccount = models.CharField(max_length=100)
+    transType = models.CharField(max_length=100)
+    transDate = models.CharField(max_length=100)
+    tellerName = models.CharField(max_length=255)
+
+
+    class Meta:
+        db_table = 'teller_transaction_history'
+
+
+
 
 
 

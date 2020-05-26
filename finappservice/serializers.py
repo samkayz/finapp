@@ -55,3 +55,21 @@ class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = TransactionHistory
         fields = "__all__"
+
+
+class TellerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Teller
+        fields = "__all__"
+
+
+class TellerBalanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TellerBalance
+        fields = "__all__"
+
+
+class TellerTransactionHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TellerTransactionHistory
+        fields = "__all__"
