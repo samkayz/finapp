@@ -24,4 +24,8 @@ urlpatterns = [
     path('checkCurrentTellerBal/<telleId>', views.checkCurrentTellerBal),
     path('operate', views.operate),
     path('enquiry', views.enquiry),
+    path('closeBal', views.closeBal),
+    path('loanApply', views.loanApply),
+    path('allLoan', views.allLoan),
+    path('approveLoan', views.approveLoan),
 ]

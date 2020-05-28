@@ -444,22 +444,29 @@ def openBal(request):
 
     try:
         tid = Teller.objects.all().get(tellerId=tellerId)
+        tba = TellerBalance.objects.filter(tellerId=tellerId, openDate=openOn).exists()
     except expression as identifier:
         error = {
             "message": "TellerId not Found"
         }
         return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
-
-    data = {
-        "user_id": tid.user_id,
-        "tellerId": tid.tellerId,
-        "openDate": openOn,
-        "openBal": openBal
-    }
-    serializer = TellerBalanceSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-    return Response(data=data, status=status.HTTP_200_OK)
+    if tba:
+        msg = {
+            "message": "Teller Business Already Open for the day"
+        }
+        return Response(data=msg, status=status.HTTP_200_OK)
+    else:
+        data = {
+            "user_id": tid.user_id,
+            "tellerId": tid.tellerId,
+            "openDate": openOn,
+            "openBal": openBal,
+            "bal": openBal
+        }
+        serializer = TellerBalanceSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -501,7 +508,7 @@ def operate(request):
     c_acct = Account.objects.all().get(accounNumber=acctNo)
     #Teller Detail
     tdetail = Teller.objects.all().get(tellerId=tellerId)
-    t_bal = TellerBalance.objects.all().get(tellerId=tellerId)
+    t_bal = TellerBalance.objects.all().get(tellerId=tellerId, openDate=tday)
 
     if transType == "CR":
         # Get Customer Balance
@@ -516,7 +523,7 @@ def operate(request):
 
         #Update Teller Balance
         tbal = t_bal.bal + amt
-        TellerBalance.objects.filter(tellerId=tellerId).update(bal=tbal)
+        TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
 
         #Update Teller Transaction History
 
@@ -565,7 +572,7 @@ def operate(request):
 
             #Update Teller Balance
             tbal = t_bal.bal - amt
-            TellerBalance.objects.filter(tellerId=tellerId).update(bal=tbal)
+            TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
 
             #Update Teller Transaction History
 
@@ -620,4 +627,132 @@ def enquiry(request):
     serializer = TransactionSerializer(instance=show, many=True)
     return Response(data=serializer.data, status=status.HTTP_200_OK)
 
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def closeBal(request):
+    user_id = request.user.id
+    base_date_time = datetime.now()
+    tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+
+    try:
+        cbal = TellerBalance.objects.all().get(user_id=user_id, openDate=tday)
+    except:
+        error = {
+            "message": "Error Occur"
+        }
+        return Response(data=error, status=status.HTTP_204_NO_CONTENT)
+    
+    if cbal.status == "open":
+        # Update Close Balance
+        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(closeBal=cbal.bal)
+
+        # Update Close Date
+        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(closeDate=tday)
+
+        #Total Transaction 
+        t_trans = cbal.bal - cbal.openBal
+
+        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(totaltran=t_trans)
+
+        # Close the Status
+        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(status='close')
+
+        sus = {
+            "message": "Teller Close for the day business"
+        }
+        return Response(data=sus, status=status.HTTP_200_OK)
+    else:
+        msg = {
+            "message": "Teller Business already close for the day"
+        }
+        return Response(data=msg, status=status.HTTP_200_OK)
+
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def loanApply(request):
+    base_date_time = datetime.now()
+    tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+    U = 6
+    res1 = ''.join(random.choices(string.digits, k=U))
+    lid = str(res1)
+    accountNumber = request.data.get('accountNumber')
+    loanAmount = request.data.get('loanAmount')
+    loanOfficer = request.data.get('loanOfficer')
+    loanType = request.data.get('loanType')
+
+    cusId = Account.objects.all().get(accounNumber=accountNumber)
+
+    data = {
+        "loanId": lid,
+        "customerId": cusId.customerId,
+        "accountNumber": cusId.accounNumber,
+        "customerName": cusId.accountName,
+        "loanAmount": loanAmount,
+        "dateApply": tday,
+        "loanOfficer": loanOfficer,
+        "loanType": loanType,
+        "loanBal": loanAmount,
+        "loanStatus": "pending"
+    }
+    serializer = LoanApplicationSerializer(data=data)
+    if serializer.is_valid():
+        serializer.save()
+    stat = {
+        "status": {
+            "status": status.HTTP_200_OK,
+            "loanId": lid
+        },
+        "message": "Loan Application successful and waiting for approval"
+    }
+    return Response(data=stat, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def allLoan(request):
+    try:
+        show = LoanApplication.objects.filter()
+    except LoanApplication.DoesNotExist:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    serializer = LoanApplicationSerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def approveLoan(request):
+    base_date_time = datetime.now()
+    tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+    loanId = request.data.get('loanId')
+    try:
+        loan = LoanApplication.objects.all().get(loanId=loanId)
+    except:
+        error = {
+            "status": {
+                "status": status.HTTP_204_NO_CONTENT
+            },
+            "message": "Wrong Loan ID/Loan not Exist"
+        }
+        return Response(data=error, status=status.HTTP_204_NO_CONTENT)
+    
+    if loan.loanStatus == "approved":
+        msg = {
+            "message": "Loan Already Approved"
+        }
+        return Response(data=msg, status=status.HTTP_208_ALREADY_REPORTED)
+    else:
+        # Update loan status
+        LoanApplication.objects.filter(loanId=loan.loanId).update(loanStatus='approved', dateApprove=tday)
+        sus = {
+            "status": {
+                "status": status.HTTP_200_OK
+            },
+            "message": f'Loan with ID {loanId} has been approved'
+        }
+        return Response(data=sus, status=status.HTTP_200_OK)
 

@@ -124,10 +124,11 @@ class TellerBalance(models.Model):
     tellerId = models.CharField(max_length=100)
     openDate = models.CharField(max_length=100)
     openBal = models.FloatField()
-    bal = models.FloatField()
+    bal = models.FloatField(default='0')
     closeDate = models.CharField(max_length=100, blank=True)
-    closeBal = models.CharField(max_length=255, blank=True)
+    closeBal = models.FloatField(default='0')
     totaltran = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=100, default='open')
 
     class Meta:
         db_table = 'teller_balance'
@@ -145,6 +146,23 @@ class TellerTransactionHistory(models.Model):
 
     class Meta:
         db_table = 'teller_transaction_history'
+
+
+class LoanApplication(models.Model):
+    loanId = models.CharField(max_length=255)
+    customerId = models.CharField(max_length=255)
+    accountNumber = models.CharField(max_length=255)
+    customerName = models.TextField()
+    loanAmount = models.FloatField()
+    dateApply = models.CharField(max_length=255)
+    loanOfficer = models.CharField(max_length=255)
+    loanType = models.CharField(max_length=255)
+    loanBal = models.FloatField()
+    loanStatus = models.CharField(max_length=255)
+    dateApprove = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        db_table = 'loan_appliaction'
 
 
 

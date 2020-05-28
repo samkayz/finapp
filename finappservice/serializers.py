@@ -73,3 +73,9 @@ class TellerTransactionHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = TellerTransactionHistory
         fields = "__all__"
+
+
+class LoanApplicationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LoanApplication
+        fields = "__all__"
