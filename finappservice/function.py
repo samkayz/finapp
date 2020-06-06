@@ -1,4 +1,5 @@
 from finappservice.models import *
+from twilio.rest import Client
 
 
 
@@ -41,3 +42,11 @@ def TellerId():
     tellerIdNo_int = int(tellerIdNo)
     newId = tellerIdNo_int + 1
     return newId
+
+
+def twilioAuth():
+    twilio = Twilio.objects.all().get(smsName='twilio')
+    account_sid = twilio.account_sid
+    auth_token  = twilio.auth_token
+    client = Client(account_sid, auth_token)
+    return client

@@ -490,6 +490,7 @@ def checkCurrentTellerBal(request, telleId):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def operate(request):
+    client = twilioAuth()
     U = 10
     res1 = ''.join(random.choices(string.digits, k=U))
     txn1 = str(res1)
@@ -506,11 +507,25 @@ def operate(request):
 
     amt = float(amount)
     c_acct = Account.objects.all().get(accounNumber=acctNo)
+    phone = Addresstable.objects.values('mobileNo').get(mnemonic=c_acct.mnemonic)['mobileNo']
     #Teller Detail
     tdetail = Teller.objects.all().get(tellerId=tellerId)
     t_bal = TellerBalance.objects.all().get(tellerId=tellerId, openDate=tday)
 
-    if transType == "CR":
+    rp = list(acctNo)
+    rp[5] = '*'
+    rp[6] = '*'
+    rp[7] = '*'
+    rp[8] = '*'
+    ac_rp = ''.join([str(elem) for elem in rp])
+    #print(ac_rp)
+    if t_bal.status == 'close':
+        err = {
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "Teller operation is closed for the day"
+        }
+        return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+    elif transType == "CR":
         # Get Customer Balance
 
         #Update Previous Balance
@@ -553,6 +568,15 @@ def operate(request):
         cdataserializer = TransactionSerializer(data=cdata)
         if cdataserializer.is_valid():
             cdataserializer.save()
+
+        #Send Message to Customer
+
+        message = client.messages.create(
+        to=phone, 
+        from_="+12018906990",
+        body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: CR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
+
+        #print(message.sid)
     else:
         if amt > c_acct.workingBalance:
             error = {
@@ -602,6 +626,10 @@ def operate(request):
             cdataserializer = TransactionSerializer(data=cdata)
             if cdataserializer.is_valid():
                 cdataserializer.save()
+        message = client.messages.create(
+        to=phone, 
+        from_="+12018906990",
+        body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: DR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
 
     suc = {
         "message": "Transaction Successful"
@@ -742,7 +770,7 @@ def approveLoan(request):
     
     if loan.loanStatus == "approved":
         msg = {
-            "message": "Loan Already Approved"
+            "message": f'Loan with ID {loanId} Already Approved'
         }
         return Response(data=msg, status=status.HTTP_208_ALREADY_REPORTED)
     else:
@@ -756,3 +784,32 @@ def approveLoan(request):
         }
         return Response(data=sus, status=status.HTTP_200_OK)
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def smsTwilio(request):
+    accountSid = request.data.get('twilioAccountId')
+    token = request.data.get('token')
+
+    if accountSid == "" or token == "":
+        err = {
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "Twilio Account ID/ Token Can't be empty"
+        }
+        return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+    elif Twilio.objects.filter(smsName='twilio').exists():
+        Twilio.objects.filter(smsName='twilio').update(account_sid=accountSid, auth_token=token)
+        sucess = {
+            "status": status.HTTP_200_OK,
+            "message": "twilio account updated"
+        }
+        return Response(data=sucess, status=status.HTTP_200_OK)
+    else:
+        data = {
+            "account_sid": accountSid,
+            "auth_token": token
+        }
+        tsms = TwilioSerializer(data=data)
+        if tsms.is_valid():
+            tsms.save()
+        return Response(data=tsms.data, status=status.HTTP_200_OK)

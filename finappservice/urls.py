@@ -28,4 +28,5 @@ urlpatterns = [
     path('loanApply', views.loanApply),
     path('allLoan', views.allLoan),
     path('approveLoan', views.approveLoan),
+    path('smsTwilio', views.smsTwilio),
 ]

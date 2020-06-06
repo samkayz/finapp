@@ -79,3 +79,9 @@ class LoanApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = LoanApplication
         fields = "__all__"
+
+
+class TwilioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Twilio
+        fields = "__all__"

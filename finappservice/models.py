@@ -165,8 +165,10 @@ class LoanApplication(models.Model):
         db_table = 'loan_appliaction'
 
 
+class Twilio(models.Model):
+    smsName = models.TextField(default='twilio')
+    account_sid = models.TextField()
+    auth_token = models.TextField()
 
-
-
-
-    
+    class Meta:
+        db_table = 'twilio'
