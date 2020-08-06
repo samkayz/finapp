@@ -87,9 +87,9 @@ WSGI_APPLICATION = 'finapp.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'finapp',
-        'USER': 'postgres',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'billing',
+        'USER': 'root',
         'PASSWORD': 'victoria1992',
         'HOST': 'localhost',
         'PORT': '',

@@ -29,6 +29,7 @@ def ftId():
         return 'FT10000000'
     fundTransferId = lastId.transId
     tId = int(fundTransferId.split('FT')[-1])
+    print(tId)
     newTransId = tId + 1
     newTrans = 'FT' + str(newTransId)
     return newTrans
