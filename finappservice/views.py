@@ -14,6 +14,9 @@ import uuid
 from .models import *
 from .function import *
 
+base_date_time = datetime.now()
+now = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -48,21 +51,32 @@ def roles(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def createOffice(request):
+    
     name =request.data.get('name')
-    openingDate = request.data.get('openingDate')
     parentid = request.data.get('parentid')
 
-    data = {
-        "name": name,
-        "opening_date": openingDate,
-        "parentid": parentid
-    }
-    serializer = OfficeCreateSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
+    if Office.objects.filter(name=name).exists():
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "Office Name Exist.....",
+            "status": "fail"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = {
+            "code": status.HTTP_201_CREATED,
+            "name": name,
+            "opening_date": now,
+            "parentid": parentid,
+            "status": "success"
+        }
+        serializer = OfficeCreateSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(data=data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -105,7 +119,9 @@ def createCustomer(request):
     idNo = request.data.get('idNo')
     if Customer.objects.filter(mnemonic=mnemonic).exists():
         error = {
-            "message": "Sorry Mnemonic alrealdy used"
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "Sorry Mnemonic alrealdy used",
+            "status": "fail"
         }
         return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
     else:
@@ -202,16 +218,24 @@ def customerById(request, customerId):
 @permission_classes([IsAuthenticated])
 def acctCategory(request):
     name = request.data.get('name')
-    accountId = request.data.get('accountId')
+    accountId = accountType()
 
-    data = {
-        "name": name,
-        "accountId": accountId
-    }
-    serializer = AccountCategorySerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-    return Response(data=serializer.data, status=status.HTTP_200_OK)
+    if AccountCategory.objects.filter(name=name).exists():
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "Account Name exist",
+            "status": "fail"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        data = {
+            "name": name,
+            "accountId": accountId
+        }
+        serializer = AccountCategorySerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -239,68 +263,40 @@ def openAccount(request):
     try:
         cust = Customer.objects.all().get(customerId=customerId)
         actype = AccountCategory.objects.all().get(accountId=accountTypeId)
+
+        if Account.objects.filter(customerId=customerId, accountTypeId=accountTypeId).exists():
+            data = {
+                "code": status.HTTP_400_BAD_REQUEST,
+                "message": "Customer have same type of account",
+                "status": "fail"
+            }
+            return Response(data=data)
+        else:
+            newAccount = AccountNumber()
+            data = {
+                "customerId": customerId,
+                "mnemonic": cust.mnemonic,
+                "accounNumber": newAccount,
+                "previousBalance": 0,
+                "workingBalance": 0,
+                "accountTypeId": actype.accountId,
+                "accountType": actype.name,
+                "active": active,
+                "createdBy": request.user.first_name + ' ' + request.user.last_name,
+                "openOn": openOn,
+                "accountName": cust.firstname + ' ' + cust.lastname,
+            }
+            serializer = AccountSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+            return Response(data=serializer.data, status=status.HTTP_200_OK)
     except:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-
-    if accountTypeId == 1:
-        newAccount = AccountNumber()
         data = {
-            "customerId": customerId,
-            "mnemonic": cust.mnemonic,
-            "accountName": cust.firstname + ' ' + cust.lastname,
-            "accounNumber": newAccount,
-            "ledgerBalance": 0,
-            "workingBalance": 0,
-            "accountTypeId": actype.accountId,
-            "accountType": actype.name,
-            "active": active,
-            "createdBy": request.user.first_name + ' ' + request.user.last_name,
-            "openOn": openOn
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "customer ID/Account type not exist",
+            "status": "fail"
         }
-        serializer = AccountSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    elif accountTypeId == 2:
-        newAccount = AccountNumber()
-        data = {
-            "customerId": customerId,
-            "mnemonic": cust.mnemonic,
-            "accountName": cust.firstname + ' ' + cust.lastname,
-            "accounNumber": newAccount,
-            "ledgerBalance": 0,
-            "workingBalance": 0,
-            "accountTypeId": actype.accountId,
-            "accountType": actype.name,
-            "active": active,
-            "createdBy": request.user.first_name + ' ' + request.user.last_name,
-            "openOn": openOn
-        }
-        serializer = AccountSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-    else:
-        newAccount = AccountNumber()
-        data = {
-            "customerId": customerId,
-            "mnemonic": cust.mnemonic,
-            "accountName": cust.firstname + ' ' + cust.lastname,
-            "accounNumber": newAccount,
-            "ledgerBalance": 0,
-            "workingBalance": 0,
-            "accountTypeId": actype.accountId,
-            "accountType": actype.name,
-            "active": active,
-            "createdBy": request.user.first_name + ' ' + request.user.last_name,
-            "openOn": openOn
-        }
-        serializer = AccountSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
@@ -571,10 +567,10 @@ def operate(request):
 
         #Send Message to Customer
 
-        message = client.messages.create(
-        to=phone, 
-        from_="+12018906990",
-        body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: CR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
+        # message = client.messages.create(
+        # to=phone, 
+        # from_="+12018906990",
+        # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: CR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
 
         #print(message.sid)
     else:
@@ -626,10 +622,10 @@ def operate(request):
             cdataserializer = TransactionSerializer(data=cdata)
             if cdataserializer.is_valid():
                 cdataserializer.save()
-        message = client.messages.create(
-        to=phone, 
-        from_="+12018906990",
-        body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: DR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
+        # message = client.messages.create(
+        # to=phone, 
+        # from_="+12018906990",
+        # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: DR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
 
     suc = {
         "message": "Transaction Successful"

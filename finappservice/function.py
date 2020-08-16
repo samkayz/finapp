@@ -51,3 +51,12 @@ def twilioAuth():
     auth_token  = twilio.auth_token
     client = Client(account_sid, auth_token)
     return client
+
+
+def accountType():
+    last_id = AccountCategory.objects.all().order_by('id').last()
+    if not last_id:
+        return '1'
+    acctId = int(last_id.accountId)
+    newId = acctId + 1
+    return newId

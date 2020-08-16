@@ -88,7 +88,7 @@ WSGI_APPLICATION = 'finapp.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'billing',
+        'NAME': 'finapp',
         'USER': 'root',
         'PASSWORD': 'victoria1992',
         'HOST': 'localhost',
