@@ -5,7 +5,7 @@ from django.contrib.auth.models import AbstractUser
 class User(AbstractUser):
     officeid = models.IntegerField()
     roleid = models.IntegerField()
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'email', 'last_name', 'password', 'officeid', 'roleid']
+    REQUIRED_FIELDS = ['first_name', 'last_name', 'email', 'password', 'officeid', 'roleid']
     USERNAME_FIELD = 'username'
 
     class Meta:
