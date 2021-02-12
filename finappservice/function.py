@@ -60,3 +60,28 @@ def accountType():
     acctId = int(last_id.accountId)
     newId = acctId + 1
     return newId
+
+
+def RegisterUser(username, firstname, lastname, email, officeid, roleid, password):
+    create = User.objects.create_user(username=username, first_name=firstname, last_name=lastname, email=email, officeid=officeid, roleid=roleid, password=password)
+    create.save()
+
+
+def CheckUsername(username):
+    if User.objects.filter(username=username).exists():
+        return True
+    else:
+        return False
+
+
+def CheckEmail(email):
+    if User.objects.filter(email=email).exists():
+        return True
+    else:
+        return False
+
+def CheckOffice(parentid):
+    if User.objects.filter(officeid=parentid).exists():
+        return True
+    else:
+        return False

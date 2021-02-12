@@ -17,7 +17,6 @@ idna==2.9
 kombu==4.6.11
 mysqlclient==2.0.1
 prompt-toolkit==3.0.8
-psycopg2-binary==2.8.5
 PyJWT==1.7.1
 pytz==2020.1
 redis==3.5.3

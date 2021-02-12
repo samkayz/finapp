@@ -19,6 +19,50 @@ now = (datetime.strftime(base_date_time, "%Y-%m-%d"))
 
 
 @api_view(['POST'])
+@permission_classes([])
+def createUser(request):
+    username = request.data.get('username')
+    first_name = request.data.get('first_name')
+    last_name = request.data.get('last_name')
+    email = request.data.get('email')
+    officeid = request.data.get('officeid')
+    roleid = request.data.get('roleid')
+    password = request.data.get('password')
+    re_password = request.data.get('re_password')
+
+    if password == re_password:
+        if CheckUsername(username) == True:
+            data = {
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': "Username Taken"
+            }
+            return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+        elif CheckEmail(email) == True:
+            data = {
+                'status': status.HTTP_400_BAD_REQUEST,
+                'message': "Email Taken"
+            }
+            return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+        
+        else:
+            RegisterUser(username, first_name, last_name, email, officeid, roleid, password)
+            data = {
+                'status': status.HTTP_200_OK,
+                "message": "registration successful"
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+    
+    else:
+        data = {
+            'status': status.HTTP_400_BAD_REQUEST,
+            'message': "password mismatch"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+@api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def role(request):
     name = request.data.get('name')
@@ -62,8 +106,13 @@ def createOffice(request):
             "status": "fail"
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif CheckOffice(parentid) == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "Parent Office.....",
+            "status": "fail"
+        }
     else:
-
         data = {
             "code": status.HTTP_201_CREATED,
             "name": name,
