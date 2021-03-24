@@ -90,10 +90,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'finapp',
-        'USER': 'root',
-        'PASSWORD': 'victoria1992',
-        'HOST': 'localhost',
-        'PORT': '',
+        'USER': 'finapp',
+        'PASSWORD': 'finapp',
+        'HOST': 'db',
+        'PORT': '3306',
     }
 }
 
