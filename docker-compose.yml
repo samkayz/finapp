@@ -10,6 +10,28 @@ services:
       - .:/app
     depends_on: 
       - db
+      - redis
+  redis:
+    image: "redis:alpine"
+  
+    
+  celery:
+    build: .
+    command: celery -A finapp worker -l info
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+  celery-beat:
+    build: .
+    command: celery -A finapp beat
+    volumes:
+      - .:/app
+    depends_on:
+      - db
+      - redis
+
 
   
   db:
@@ -20,7 +42,9 @@ services:
       MYSQL_USER: finapp
       MYSQL_PASSWORD: finapp
       MYSQL_ROOT_PASSWORD: finapp
+    env_file: 
+      - .env
     volumes: 
       - .dbdata:/var/lib/mysql
     ports:
-      - 33066:3306
+      - 33067:3306

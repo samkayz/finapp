@@ -9,3 +9,8 @@ import datetime
 import time
 from datetime import timedelta
 import os
+
+
+@shared_task
+def hello():
+    print("Hello there!")

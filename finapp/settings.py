@@ -11,7 +11,9 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import json
 from datetime import timedelta
+from celery.schedules import crontab
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -21,10 +23,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'i67u(=z^+_%8)f19zikh_@p8a(w#pc3!93k=7&6do*&z!+k8=#'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'i67u(=z^+_%8)f19zikh_@p8a(w#pc3!93k=7&6do*&z!+k8=#')
+DEBUG = os.getenv('DJANGO_DEBUG', False)
 
 ALLOWED_HOSTS = ['*']
 
@@ -87,15 +87,20 @@ WSGI_APPLICATION = 'finapp.wsgi.application'
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'finapp',
-        'USER': 'finapp',
-        'PASSWORD': 'finapp',
-        'HOST': 'db',
-        'PORT': '3306',
-    }
-}
+     'default': {
+         'ENGINE': 'django.db.backends.{}'.format(
+             os.getenv('DATABASE_ENGINE', 'mysql')
+         ),
+         'NAME': os.getenv('DATABASE_NAME', 'finapp'),
+         'USER': os.getenv('DATABASE_USERNAME', 'finapp'),
+         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'finapp'),
+         'HOST': os.getenv('DATABASE_HOST', 'db'),
+         'PORT': os.getenv('DATABASE_PORT', 3306),
+         'OPTIONS': json.loads(
+             os.getenv('DATABASE_OPTIONS', '{}')
+         ),
+     }
+ }
 
 
 REST_FRAMEWORK = {
@@ -167,6 +172,13 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
+CELERY_BEAT_SCHEDULE = {
+    'hello': {
+        'task': 'app.tasks.hello',
+        'schedule': crontab()  # execute every minute
+    }
+}
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -190,7 +202,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'customer')
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 # CELERY STUFF
-BROKER_URL = 'redis://localhost:6379'
+CELERY_BROKER_URL = 'redis://localhost:6379'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
