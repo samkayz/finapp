@@ -172,13 +172,6 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-CELERY_BEAT_SCHEDULE = {
-    'hello': {
-        'task': 'app.tasks.hello',
-        'schedule': crontab()  # execute every minute
-    }
-}
-
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
@@ -202,8 +195,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'customer')
 STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
 
 # CELERY STUFF
-CELERY_BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
+CELERY_BROKER_URL = 'redis://redis:6379'
+CELERY_RESULT_BACKEND = 'redis://redis:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'

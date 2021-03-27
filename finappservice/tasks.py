@@ -11,6 +11,7 @@ from datetime import timedelta
 import os
 
 
-@shared_task
+@periodic_task(run_every=timedelta(seconds=10))
 def hello():
-    print("Hello there!")
+    print("Welcome to Celery")
+    pass
