@@ -11,7 +11,7 @@ from datetime import timedelta
 import os
 
 
-@periodic_task(run_every=timedelta(seconds=10))
+@periodic_task(run_every=timedelta(seconds=1000))
 def hello():
     print("Welcome to Celery")
     pass

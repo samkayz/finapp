@@ -24,7 +24,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'i67u(=z^+_%8)f19zikh_@p8a(w#pc3!93k=7&6do*&z!+k8=#')
-DEBUG = os.getenv('DJANGO_DEBUG', False)
+DEBUG = os.getenv('DJANGO_DEBUG', True)
 
 ALLOWED_HOSTS = ['*']
 
@@ -47,9 +47,9 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'finappservice.User'
 
-DJOSER = {
-    'LOGIN_FIELD': 'username'
-}
+# DJOSER = {
+#     'LOGIN_FIELD': 'username'
+# }
 
 
 MIDDLEWARE = [

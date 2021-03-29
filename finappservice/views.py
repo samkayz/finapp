@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
@@ -13,6 +14,7 @@ import string
 import uuid
 from .models import *
 from .function import *
+functionClass = App()
 
 base_date_time = datetime.now()
 now = (datetime.strftime(base_date_time, "%Y-%m-%d"))
@@ -21,24 +23,26 @@ now = (datetime.strftime(base_date_time, "%Y-%m-%d"))
 @api_view(['POST'])
 @permission_classes([])
 def createUser(request):
+    U = 6
+    res = ''.join(random.choices(string.digits, k=U))
+    cs = str(res)
+    staffid = "STID" + cs
     username = request.data.get('username')
-    first_name = request.data.get('first_name')
-    last_name = request.data.get('last_name')
+    staffname = request.data.get('staffname')
     email = request.data.get('email')
-    officeid = request.data.get('officeid')
-    roleid = request.data.get('roleid')
+    role = request.data.get('role')
     password = request.data.get('password')
     re_password = request.data.get('re_password')
 
     if password == re_password:
-        if CheckUsername(username) == True:
+        if functionClass.CheckUsername(username) == True:
             data = {
                 'status': status.HTTP_400_BAD_REQUEST,
                 'message': "Username Taken"
             }
             return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
-        elif CheckEmail(email) == True:
+        elif functionClass.CheckEmail(email) == True:
             data = {
                 'status': status.HTTP_400_BAD_REQUEST,
                 'message': "Email Taken"
@@ -46,12 +50,21 @@ def createUser(request):
             return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
         
         else:
-            RegisterUser(username, first_name, last_name, email, officeid, roleid, password)
-            data = {
-                'status': status.HTTP_200_OK,
-                "message": "registration successful"
-            }
-            return Response(data=data, status=status.HTTP_200_OK)
+            if role == 'tl' or role == 'cs':
+                functionClass.RegisterUser(username, staffname, email, role, password, staffid)
+                data = {
+                    'status': status.HTTP_200_OK,
+                    "staffID": staffid,
+                    "message": "registration successful"
+                }
+                return Response(data=data, status=status.HTTP_200_OK)
+                
+            else:
+                data = {
+                    'status': status.HTTP_400_BAD_REQUEST,
+                    'message': "Invalid Role"
+                }
+                return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
     else:
         data = {
@@ -62,98 +75,75 @@ def createUser(request):
 
 
 
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def role(request):
-    name = request.data.get('name')
-    desc = request.data.get('description')
-
-    data = {
-        "name": name,
-        "description": desc
-    }
-    serializer = RoleCreateSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
-    else:
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def roles(request):
-    try:
-        show = Role.objects.filter()
-    except Role.DoesNotExist:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
-
-    serializer = RoleCreateSerializer(instance=show, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def createOffice(request):
-    
+    U = 4
+    res = ''.join(random.choices(string.digits, k=U))
+    cs = str(res)
+    branchcode = "B" + cs
     name =request.data.get('name')
-    parentid = request.data.get('parentid')
-
-    if Office.objects.filter(name=name).exists():
+    
+    if functionClass.CheckIfSuperLoginUser(request) == False:
         data = {
             "code": status.HTTP_400_BAD_REQUEST,
-            "message": "Office Name Exist.....",
-            "status": "fail"
+            "message": "Permissinon Denied"
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
-    elif CheckOffice(parentid) == False:
-        data = {
-            "code": status.HTTP_400_BAD_REQUEST,
-            "message": "Parent Office.....",
-            "status": "fail"
-        }
     else:
-        data = {
-            "code": status.HTTP_201_CREATED,
-            "name": name,
-            "opening_date": now,
-            "parentid": parentid,
-            "status": "success"
-        }
-        serializer = OfficeCreateSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(data=data, status=status.HTTP_201_CREATED)
+        if Branch.objects.filter(name=name).exists():
+            data = {
+                "code": status.HTTP_400_BAD_REQUEST,
+                "message": "Office Name Exist.....",
+                "status": "fail"
+            }
+            return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            data = {
+                "code": status.HTTP_201_CREATED,
+                "name": name,
+                "branchcode": branchcode
+            }
+            serializer = BranchCreateSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(data=data, status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def offices(request):
-    try:
-        show = Office.objects.filter()
-    except Office.DoesNotExist:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+    if functionClass.CheckIfSuperLoginUser(request) == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "Permissinon Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        try:
+            show = Branch.objects.filter()
+        except Branch.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = OfficeCreateSerializer(instance=show, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = BranchCreateSerializer(instance=show, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def createCustomer(request):
-    newId = customerId()
-    base_date_time = datetime.now()
+    newId = functionClass.customerId()
     submittedDate = (datetime.strftime(base_date_time, "%Y-%m-%d"))
     #Customer Detail
-    officeId = request.data.get('officeId')
+    branch = request.data.get('branchid')
     firstname = request.data.get('firstname')
     lastname = request.data.get('lastname')
     mnemonic = request.data.get('mnemonic')
     mobileNo = request.data.get('mobileNo')
-    active = request.data.get('active')
 
     # Customer Address
     addressLine = request.data.get('addressLine')
@@ -174,48 +164,15 @@ def createCustomer(request):
         }
         return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
     else:
-        CusData = {
-            "customerId": newId,
-            "officeId": officeId,
-            "firstname": firstname,
-            "lastname": lastname,
-            "mnemonic": mnemonic,
-            "submittedDate": submittedDate,
-            "active": active
+        functionClass.CreateCustomer(branch, newId, firstname, lastname, mnemonic, addressLine, street, landmark, country, state, district, mobileNo, modeOfId, idNo)
+        data = {
+            "code": status.HTTP_200_OK,
+            "status": "success",
+            "CustomerID": newId,
+            "submittedDate": submittedDate
         }
-        cusSerializer = CustomerSerializer(data=CusData)
-        if cusSerializer.is_valid():
-            cusSerializer.save()
 
-        uid = Customer.objects.values('id').get(mnemonic=mnemonic)['id']
-
-        cusAddress = {
-            "userId": uid,
-            "addressLine": addressLine,
-            "street": street,
-            "landmark": landmark,
-            "country": country,
-            "state": state,
-            "mobileNo": mobileNo,
-            "district": district,
-            "mnemonic": mnemonic
-        }
-        addSerializer = AddresstableSerializer(data=cusAddress)
-        if addSerializer.is_valid():
-            addSerializer.save()
-    
-
-        Id = {
-            "userId": uid,
-            "modeOfId": modeOfId,
-            "idNo": idNo,
-            "mnemonic": mnemonic
-        }
-        IdSerializer = IdentificationIdSerializer(data=Id)
-        if IdSerializer.is_valid():
-            IdSerializer.save()
-
-        return Response(data=cusSerializer.data, status=status.HTTP_200_OK)
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -229,47 +186,17 @@ def allCustomer(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def customerById(request, customerId):
-    mnemonic = Customer.objects.values('mnemonic').get(customerId=customerId)['mnemonic']
-    cus = Customer.objects.all().get(mnemonic=mnemonic)
-    ad = Addresstable.objects.all().get(mnemonic=mnemonic)
-    mn = IdentificationId.objects.all().get(mnemonic=mnemonic)
-
-    data = {
-        "profile": {
-            "id": cus.id,
-            "customerId": cus.customerId,
-            "officeId": cus.officeId,
-            "firstname": cus.firstname,
-            "lastname": cus.lastname,
-            "mnemonic": cus.mnemonic,
-            "activationDate": cus.activationDate,
-            "submittedDate": cus.submittedDate,
-            "active": cus.active,
-            "address": {
-                "data": {
-                    "addressLine": ad.addressLine,
-                    "street": ad.street,
-                    "landmark": ad.landmark,
-                    "country": ad.country,
-                    "state": ad.state, 
-                    "district": ad.district,
-                    "mobileNo": ad.mobileNo
-                }
-            },
-            "modeOfId": mn.modeOfId,
-            "idNo": mn.idNo
-        }
-    }
-    return Response(data=data, status=status.HTTP_200_OK)
+    show = Customer.objects.filter(customerId=customerId)
+    serializer = CustomerSerializer(instance=show, many=True)
+    return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def acctCategory(request):
     name = request.data.get('name')
-    accountId = accountType()
 
-    if AccountCategory.objects.filter(name=name).exists():
+    if AccountType.objects.filter(name=name).exists():
         data = {
             "code": status.HTTP_400_BAD_REQUEST,
             "message": "Account Name exist",
@@ -278,8 +205,7 @@ def acctCategory(request):
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     else:
         data = {
-            "name": name,
-            "accountId": accountId
+            "name": name
         }
         serializer = AccountCategorySerializer(data=data)
         if serializer.is_valid():
@@ -291,8 +217,8 @@ def acctCategory(request):
 @permission_classes([IsAuthenticated])
 def allAcctCategory(request):
     try:
-        show = AccountCategory.objects.filter()
-    except AccountCategory.DoesNotExist:
+        show = AccountType.objects.filter()
+    except AccountType.DoesNotExist:
         return Response(status=status.HTTP_400_BAD_REQUEST)
     
     serializer = AccountCategorySerializer(instance=show, many=True)
@@ -303,15 +229,12 @@ def allAcctCategory(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def openAccount(request):
-    base_date_time = datetime.now()
-    openOn = (datetime.strftime(base_date_time, "%Y-%m-%d"))
     customerId = request.data.get('customerId')
     accountTypeId = request.data.get('accountTypeId')
-    active = request.data.get('active')
 
     try:
         cust = Customer.objects.all().get(customerId=customerId)
-        actype = AccountCategory.objects.all().get(accountId=accountTypeId)
+        actype = AccountType.objects.all().get(id=accountTypeId)
 
         if Account.objects.filter(customerId=customerId, accountTypeId=accountTypeId).exists():
             data = {
@@ -321,18 +244,15 @@ def openAccount(request):
             }
             return Response(data=data)
         else:
-            newAccount = AccountNumber()
+            newAccount = functionClass.AccountNumber()
             data = {
+                "customer": cust.id,
                 "customerId": customerId,
                 "mnemonic": cust.mnemonic,
                 "accounNumber": newAccount,
-                "previousBalance": 0,
-                "workingBalance": 0,
-                "accountTypeId": actype.accountId,
+                "accountTypeId": actype.id,
                 "accountType": actype.name,
-                "active": active,
-                "createdBy": request.user.first_name + ' ' + request.user.last_name,
-                "openOn": openOn,
+                "createdBy": request.user.staffname,
                 "accountName": cust.firstname + ' ' + cust.lastname,
             }
             serializer = AccountSerializer(data=data)
@@ -353,11 +273,11 @@ def openAccount(request):
 def customerAccount(request, customerId):
 
     try:
-        show = Account.objects.filter(customerId=customerId)
-    except Account.DoesNotExist:
+        show = Customer.objects.filter(customerId=customerId)
+    except Customer.DoesNotExist:
         return Response(status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = AccountSerializer(instance=show, many=True)
+    serializer = ViewCustomerAccountsSerializer(instance=show, many=True)
     return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
@@ -451,7 +371,7 @@ def transById(request, transId):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def assignTeller(request):
-    tellerId = TellerId()
+    tellerId = functionClass.TellerId()
     user_id = request.data.get('userId')
 
     try:
@@ -502,7 +422,7 @@ def openBal(request):
         return Response(data=msg, status=status.HTTP_200_OK)
     else:
         data = {
-            "user_id": tid.user_id,
+            "user": tid.user_id,
             "tellerId": tid.tellerId,
             "openDate": openOn,
             "openBal": openBal,

@@ -1,68 +1,120 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import PermissionsMixin
+from django.contrib.auth.models import AbstractBaseUser, UserManager, BaseUserManager
+from django.utils.translation import ugettext_lazy as _
+from django.conf import settings
+from django.contrib.sessions.models import Session
 
 
-class User(AbstractUser):
-    officeid = models.IntegerField()
-    roleid = models.IntegerField()
-    REQUIRED_FIELDS = ['first_name', 'last_name', 'email', 'password', 'officeid', 'roleid']
-    USERNAME_FIELD = 'username'
+
+
+class UserManager(BaseUserManager):
+    """Define a model manager for User model with no username field."""
+
+    use_in_migrations = True
+
+    def _create_user(self, email, password, **extra_fields):
+        """Create and save a User with the given email and password."""
+        if not email:
+            raise ValueError('The given email must be set')
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_user(self, email, password=None, **extra_fields):
+        """Create and save a regular User with the given email and password."""
+        extra_fields.setdefault('is_staff', False)
+        extra_fields.setdefault('is_superuser', False)
+        return self._create_user(email, password, **extra_fields)
+
+    def create_superuser(self, email, password, **extra_fields):
+        """Create and save a SuperUser with the given email and password."""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return self._create_user(email, password, **extra_fields)
+
+
+class User(AbstractBaseUser, PermissionsMixin):
+    username = models.CharField(max_length=255, unique=True)
+    email = models.EmailField(blank=True)
+    staffname = models.TextField(verbose_name='staffname', null=True, blank=True)
+    staffid = models.TextField(verbose_name='staffid', null=True, blank=True)
+    is_staff = models.BooleanField(verbose_name='is_staff', default=True)
+    date_joined = models.DateTimeField(verbose_name='date_joined', auto_now_add=True)
+    is_active = models.BooleanField(verbose_name='is_active', default=True)
+    is_teller = models.BooleanField(verbose_name='is_teller', default=False)
+    is_customer_service = models.BooleanField(verbose_name='is_customer_service', default=False)
+
+    objects =  UserManager()
+
+    USERNAME_FIELD = "username"
+    REQUIRED_FIELDS = ['email']
 
     class Meta:
         db_table = 'user'
 
-    def get_username(self):
-        return self
+    def __str__(self):
+        return self.username
 
 
 
-class Role(models.Model):
+# class Role(models.Model):
+#     name = models.CharField(max_length=255)
+#     description = models.TextField()
+
+#     class Meta:
+#         db_table = 'role'
+
+
+class Branch(models.Model):
     name = models.CharField(max_length=255)
-    description = models.TextField()
+    branchcode = models.CharField(max_length=255, null=True, blank=True)
+    opening_date = models.DateField(auto_now=True)
 
     class Meta:
-        db_table = 'role'
-
-
-class Office(models.Model):
-    name = models.CharField(max_length=255)
-    opening_date = models.CharField(max_length=255)
-    parentid = models.IntegerField()
-
-    class Meta:
-        db_table = 'office'
+        db_table = 'branch'
 
 
 class Customer(models.Model):
+    branchcode = models.CharField(max_length=255, null=True, blank=True)
     customerId = models.CharField(max_length=255, null=True, blank=True)
-    officeId = models.IntegerField()
     firstname = models.CharField(max_length=255)
     lastname = models.CharField(max_length=255)
     mnemonic = models.CharField(max_length=100)
     activationDate = models.CharField(max_length=255, null=True, blank=True)
-    submittedDate = models.CharField(max_length=255)
-    active = models.BooleanField()
+    submittedDate = models.DateTimeField(auto_now=True)
+    active = models.BooleanField(default=True)
+
 
     class Meta:
         db_table = 'customer'
 
 
 class Addresstable(models.Model):
-    userId = models.IntegerField()
-    addressLine = models.TextField()
-    street = models.CharField(max_length=255)
-    landmark = models.CharField(max_length=255)
-    country = models.CharField(max_length=255)
-    state = models.CharField(max_length=255)
-    district = models.CharField(max_length=255)
-    mobileNo = models.CharField(max_length=255)
-    mnemonic = models.CharField(max_length=255)
+    customer = models.ForeignKey(Customer, related_name='address', on_delete=models.CASCADE)
+    addressLine = models.TextField(null=True, blank=True)
+    street = models.TextField(null=True, blank=True)
+    landmark = models.TextField(null=True, blank=True)
+    country = models.TextField(null=True, blank=True)
+    state = models.TextField(null=True, blank=True)
+    district = models.TextField(null=True, blank=True)
+    mobileNo = models.TextField(null=True, blank=True)
+    mnemonic = models.TextField(null=True, blank=True)
 
     class Meta:
         db_table = 'addresstable'
 
+
 class IdentificationId(models.Model):
-    userId = models.IntegerField()
+    customer = models.ForeignKey(Customer, related_name='ModeOfId', on_delete=models.CASCADE)
     modeOfId = models.CharField(max_length=255)
     idNo = models.CharField(max_length=255)
     mnemonic = models.CharField(max_length=255)
@@ -71,29 +123,32 @@ class IdentificationId(models.Model):
         db_table = 'identification_id'
 
 
+class AccountType(models.Model):
+    name = models.CharField(max_length=255)
+    date_created = models.DateField(auto_now=True)
+     
+    class Meta:
+        db_table = 'account_type'
+
+        
 class Account(models.Model):
+    customer = models.ForeignKey(Customer, related_name='account', on_delete=models.CASCADE)
     customerId = models.CharField(max_length=255)
     mnemonic = models.CharField(max_length=255)
     accountName = models.TextField()
     accounNumber = models.CharField(max_length=255)
-    previousBalance = models.FloatField()
-    workingBalance = models.FloatField()
+    previousBalance = models.FloatField(default=0)
+    workingBalance = models.FloatField(default=0)
     accountTypeId = models.IntegerField()
     accountType = models.CharField(max_length=255)
-    active = models.BooleanField()
+    active = models.BooleanField(default=True)
     createdBy = models.CharField(max_length=255)
-    openOn = models.CharField(max_length=255)
+    openOn = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'account'
 
 
-class AccountCategory(models.Model):
-    name = models.CharField(max_length=255)
-    accountId = models.IntegerField()
-     
-    class Meta:
-        db_table = 'accountCategory'
 
 
 class TransactionHistory(models.Model):
@@ -111,16 +166,25 @@ class TransactionHistory(models.Model):
 
 
 class Teller(models.Model):
-    user_id = models.IntegerField()
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     tellerId = models.CharField(max_length=100)
     tellerName = models.CharField(max_length=255)
 
     class Meta:
         db_table = 'teller'
+    
+
+class CustomerService(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    staffid = models.CharField(max_length=100)
+    staffname = models.CharField(max_length=255)
+
+    class Meta:
+        db_table = 'customer_service'
 
 
 class TellerBalance(models.Model):
-    user_id = models.IntegerField()
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     tellerId = models.CharField(max_length=100)
     openDate = models.CharField(max_length=100)
     openBal = models.FloatField()
@@ -135,8 +199,7 @@ class TellerBalance(models.Model):
 
 
 class TellerTransactionHistory(models.Model):
-    user_id = models.IntegerField()
-    tellerId = models.CharField(max_length=100)
+    teller = models.OneToOneField(User, on_delete=models.CASCADE)
     transAmount = models.FloatField()
     transAccount = models.CharField(max_length=100)
     transType = models.CharField(max_length=100)
@@ -149,6 +212,7 @@ class TellerTransactionHistory(models.Model):
 
 
 class LoanApplication(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     loanId = models.CharField(max_length=255)
     customerId = models.CharField(max_length=255)
     accountNumber = models.CharField(max_length=255)

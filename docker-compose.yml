@@ -14,7 +14,7 @@ services:
     volumes: 
       - .dbdata:/var/lib/mysql
     ports:
-      - 33067:3306
+      - 33068:3306
   redis:
     image: "redis:alpine"
   backend:
