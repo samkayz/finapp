@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+from decouple import config
 import os
 import json
 from datetime import timedelta
@@ -23,10 +24,18 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'i67u(=z^+_%8)f19zikh_@p8a(w#pc3!93k=7&6do*&z!+k8=#')
-DEBUG = os.getenv('DJANGO_DEBUG', True)
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*']
+
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+EMAIL_PORT = config('EMAIL_PORT')
+EMAIL_FROM = config('EMAIL_FROM')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
 
 
 # Application definition
@@ -47,9 +56,9 @@ INSTALLED_APPS = [
 
 AUTH_USER_MODEL = 'finappservice.User'
 
-# DJOSER = {
-#     'LOGIN_FIELD': 'username'
-# }
+DJOSER = {
+    'LOGIN_FIELD': 'username'
+}
 
 
 MIDDLEWARE = [
@@ -88,14 +97,15 @@ WSGI_APPLICATION = 'finapp.wsgi.application'
 
 DATABASES = {
      'default': {
-         'ENGINE': 'django.db.backends.{}'.format(
-             os.getenv('DATABASE_ENGINE', 'mysql')
-         ),
-         'NAME': os.getenv('DATABASE_NAME', 'finapp'),
-         'USER': os.getenv('DATABASE_USERNAME', 'finapp'),
-         'PASSWORD': os.getenv('DATABASE_PASSWORD', 'finapp'),
-         'HOST': os.getenv('DATABASE_HOST', 'db'),
-         'PORT': os.getenv('DATABASE_PORT', 3306),
+         'ENGINE': 'django.db.backends.mysql',
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+         'NAME': config('DATABASE_NAME'),
+         'USER': config('DATABASE_USERNAME'),
+         'PASSWORD': config('DATABASE_PASSWORD'),
+         'HOST': config('DATABASE_HOST'),
+         'PORT': config('DATABASE_PORT'),
          'OPTIONS': json.loads(
              os.getenv('DATABASE_OPTIONS', '{}')
          ),
