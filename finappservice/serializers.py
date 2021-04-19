@@ -98,3 +98,12 @@ class TwilioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Twilio
         fields = "__all__"
+
+
+class userSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'last_login', 'is_superuser', 
+        'username', 'email', 'staffname', 'staffid', 
+        'is_staff', 'date_joined', 'is_active', 
+        'is_teller', 'is_customer_service', 'is_head_teller']

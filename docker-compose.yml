@@ -17,7 +17,7 @@ services:
       - 33068:3306
   redis:
     image: "redis:alpine"
-  backend:
+  finapp:
     build: 
       context: .
       dockerfile: Dockerfile

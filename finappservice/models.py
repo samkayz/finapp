@@ -51,6 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(verbose_name='date_joined', auto_now_add=True)
     is_active = models.BooleanField(verbose_name='is_active', default=True)
     is_teller = models.BooleanField(verbose_name='is_teller', default=False)
+    is_head_teller = models.BooleanField(verbose_name='is_head_teller', default=False)
     is_customer_service = models.BooleanField(verbose_name='is_customer_service', default=False)
 
     objects =  UserManager()
@@ -153,7 +154,7 @@ class Account(models.Model):
 
 class TransactionHistory(models.Model):
     transId = models.CharField(max_length=255)
-    transDate = models.CharField(max_length=255)
+    transDate = models.DateTimeField(auto_now=True)
     transAmount = models.FloatField()
     senderName = models.CharField(max_length=255, blank=True)
     senderAccount = models.CharField(max_length=255, blank=True)
@@ -167,6 +168,7 @@ class TransactionHistory(models.Model):
 
 class Teller(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    is_head_teller = models.BooleanField(default=False)
     tellerId = models.CharField(max_length=100)
     tellerName = models.CharField(max_length=255)
 
@@ -211,6 +213,16 @@ class TellerTransactionHistory(models.Model):
         db_table = 'teller_transaction_history'
 
 
+class LoanType(models.Model):
+    loan_code = models.TextField(null=True, blank=True)
+    loan_name = models.TextField(null=True, blank=True)
+    loan_duration = models.BigIntegerField(null=True, blank=True)
+    date_created = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'loan_type'
+
+
 class LoanApplication(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     loanId = models.CharField(max_length=255)
@@ -220,9 +232,12 @@ class LoanApplication(models.Model):
     loanAmount = models.FloatField()
     dateApply = models.CharField(max_length=255)
     loanOfficer = models.CharField(max_length=255)
-    loanType = models.CharField(max_length=255)
+    loan_code = models.CharField(max_length=255)
     loanBal = models.FloatField()
-    loanStatus = models.CharField(max_length=255)
+    duration = models.BigIntegerField(null=True, blank=True)
+    pay_day = models.DateField(null=True, blank=True)
+    loan_approve = models.BooleanField(default=False)
+    loan_paid = models.BooleanField(default=False)
     dateApprove = models.CharField(max_length=255, blank=True)
 
     class Meta:

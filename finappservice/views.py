@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -15,6 +15,7 @@ import uuid
 from .models import *
 from .function import *
 functionClass = App()
+from datetime import datetime, timedelta
 
 base_date_time = datetime.now()
 now = (datetime.strftime(base_date_time, "%Y-%m-%d"))
@@ -73,6 +74,68 @@ def createUser(request):
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def allUser(request):
+    try:
+        userSnippet = User.objects.all()
+    except: User.DoesNotExist
+
+    if functionClass.CheckIfSuperLoginUser(request) == False:
+        data = {
+            "code": status.HTTP_200_OK,
+            "message": "Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+    
+    else:
+        user = userSerializer(instance=userSnippet, many=True)
+        return Response(data=user.data, status=status.HTTP_200_OK)
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteUser(request, id):
+    try:
+        userDetails = get_object_or_404(User, id=id)
+        if functionClass.CheckIfSuperLoginUser(request) == False:
+            data = {
+                "code": status.HTTP_200_OK,
+                "message": "Permission Denied"
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+        elif userDetails.is_superuser == True:
+            data = {
+                "code": status.HTTP_200_OK,
+                "message": "You can't delete this user"
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+        else:
+            ## Delete User Instance
+            delUser = User.objects.filter(id=id)
+            delUser.delete()
+
+            ## Delete Customer Service Instance
+            dltCust = CustomerService.objects.filter(user_id=id)
+            dltCust.delete()
+
+            ## Delete Teller Instance
+            dltTell = Teller.objects.filter(user_id=id)
+            dltTell.delete()
+
+
+            data = {
+                "code": status.HTTP_200_OK,
+                "message": "User deleted"
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+    except:
+        data = {
+            'status': status.HTTP_400_BAD_REQUEST,
+            'message': "Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
 
 
 
@@ -410,7 +473,7 @@ def openBal(request):
     try:
         tid = Teller.objects.all().get(tellerId=tellerId)
         tba = TellerBalance.objects.filter(tellerId=tellerId, openDate=openOn).exists()
-    except expression as identifier:
+    except:
         error = {
             "message": "TellerId not Found"
         }
@@ -625,15 +688,17 @@ def enquiry(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def closeBal(request):
+    tellerId = request.data.get('tellerId')
     user_id = request.user.id
     base_date_time = datetime.now()
     tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
 
     try:
-        cbal = TellerBalance.objects.all().get(user_id=user_id, openDate=tday)
+        cbal = get_object_or_404(TellerBalance, tellerId=tellerId, openDate=tday)
+        # cbal = TellerBalance.objects.all().get(tellerId=tellerId, openDate=tday)
     except:
         error = {
-            "message": "Error Occur"
+            "message": "Permission denied"
         }
         return Response(data=error, status=status.HTTP_204_NO_CONTENT)
     
@@ -666,6 +731,43 @@ def closeBal(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def create_loan(request):
+    U = 4
+    res1 = ''.join(random.choices(string.digits, k=U))
+    loan_code = str(res1)
+    loanName = request.data.get('loanName')
+    loan_duration = request.data.get('duration')
+
+    if request.user.is_superuser == False:
+        data = {
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "Permission denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif LoanType.objects.filter(Q(loan_name__startswith=loanName) | Q(loan_name__endswith=loanName)):
+        data = {
+            "status": status.HTTP_400_BAD_REQUEST,
+            "message": "Name already exist"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        createLoanType = LoanType(loan_name=loanName, loan_code=loan_code, loan_duration=loan_duration)
+        createLoanType.save()
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True, 
+            "response": {
+                "loanCode": loan_code,
+                "loanName": loanName
+            }
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def loanApply(request):
     base_date_time = datetime.now()
     tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
@@ -675,33 +777,61 @@ def loanApply(request):
     accountNumber = request.data.get('accountNumber')
     loanAmount = request.data.get('loanAmount')
     loanOfficer = request.data.get('loanOfficer')
-    loanType = request.data.get('loanType')
+    loanType = request.data.get('loanCode')
 
-    cusId = Account.objects.all().get(accounNumber=accountNumber)
-
-    data = {
-        "loanId": lid,
-        "customerId": cusId.customerId,
-        "accountNumber": cusId.accounNumber,
-        "customerName": cusId.accountName,
-        "loanAmount": loanAmount,
-        "dateApply": tday,
-        "loanOfficer": loanOfficer,
-        "loanType": loanType,
-        "loanBal": loanAmount,
-        "loanStatus": "pending"
-    }
-    serializer = LoanApplicationSerializer(data=data)
-    if serializer.is_valid():
-        serializer.save()
-    stat = {
-        "status": {
-            "status": status.HTTP_200_OK,
-            "loanId": lid
-        },
-        "message": "Loan Application successful and waiting for approval"
-    }
-    return Response(data=stat, status=status.HTTP_200_OK)
+    if Account.objects.filter(accounNumber=accountNumber).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False, 
+            "response": {
+                "loanCode": "Invalid Account/ Account doesn't exist"
+            }
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif LoanType.objects.filter(loan_code=loanType).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False, 
+            "response": {
+                "loanCode": "Invalid Loan ID/ Loan Type doesn't exist"
+            }
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif LoanApplication.objects.filter(accountNumber=accountNumber, loan_paid=False).exists():
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False, 
+            "response": {
+                "message": "This customer have unpaid Loan"
+            }
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        cusId = get_object_or_404(Account, accounNumber=accountNumber)
+        custDetail = get_object_or_404(Customer, customerId=cusId.customerId)
+        loanDetail = get_object_or_404(LoanType, loan_code=loanType)
+    
+        createLoan = LoanApplication(loanId=lid, 
+        customerId=cusId.customerId, 
+        accountNumber=cusId.accounNumber, 
+        customerName=cusId.accountName, 
+        loanAmount=loanAmount, 
+        dateApply=tday, 
+        loanOfficer=loanOfficer, duration=loanDetail.loan_duration,
+        loan_code=loanType, loanBal=loanAmount, customer_id=custDetail.id)
+        createLoan.save()
+        # serializer = LoanApplicationSerializer(data=data)
+        # if serializer.is_valid():
+        #     serializer.save()
+        stat = {
+            "status": {
+                "status": status.HTTP_200_OK,
+                "loanId": lid
+                },
+            "message": "Loan Application successful and waiting for approval"
+        }
+        return Response(data=stat, status=status.HTTP_200_OK)
+    
 
 
 @api_view(['GET'])
@@ -723,7 +853,7 @@ def approveLoan(request):
     tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
     loanId = request.data.get('loanId')
     try:
-        loan = LoanApplication.objects.all().get(loanId=loanId)
+        loan = get_object_or_404(LoanApplication, loanId=loanId)
     except:
         error = {
             "status": {
@@ -733,21 +863,44 @@ def approveLoan(request):
         }
         return Response(data=error, status=status.HTTP_204_NO_CONTENT)
     
-    if loan.loanStatus == "approved":
+    if loan.loan_approve == True:
+        dt = datetime.now()
+        td = loan.pay_day
+        print(td)
+        print(dt)
         msg = {
             "message": f'Loan with ID {loanId} Already Approved'
         }
         return Response(data=msg, status=status.HTTP_208_ALREADY_REPORTED)
     else:
+        acct = get_object_or_404(Account, accounNumber=loan.accountNumber)
+        no_of_days = loan.duration
+        dt = datetime.now()
+        td = timedelta(days=no_of_days)
+        pay_date = dt + td
         # Update loan status
-        LoanApplication.objects.filter(loanId=loan.loanId).update(loanStatus='approved', dateApprove=tday)
-        sus = {
-            "status": {
-                "status": status.HTTP_200_OK
-            },
-            "message": f'Loan with ID {loanId} has been approved'
+        LoanApplication.objects.filter(loanId=loan.loanId).update(loan_approve=True, dateApprove=tday, pay_day=pay_date)
+
+        ## Add the Loan Amount to the customer account Number
+        bal = acct.workingBalance
+        loan_amount = loan.loanAmount
+        newBal = bal + loan_amount
+
+        update_account = Account.objects.filter(accounNumber=acct.accounNumber)
+        update_account.update(previousBalance=bal, workingBalance=newBal)
+
+        ## Create Transaction Log
+        senderName = 'Loan'
+        comment = 'Loan Disbursement'
+        functionClass.createLog(loan.loanAmount, senderName, senderName, loan.customerName, loan.accountNumber, comment)
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True, 
+            "response": {
+                "message": f'{loan.loanAmount} has been approved for {loan.customerName}'
+            }
         }
-        return Response(data=sus, status=status.HTTP_200_OK)
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

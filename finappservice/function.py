@@ -1,5 +1,7 @@
 from finappservice.models import *
 from twilio.rest import Client
+import random
+import string
 
 
 
@@ -112,4 +114,16 @@ class App:
         CustAdd.save()
         ModeOfId = IdentificationId(customer=customer, modeOfId=modeOfId, idNo=idNo, mnemonic=mnemonic)
         ModeOfId.save()
+        pass
+
+    
+    def createLog(self, transAmount, senderName, senderAccount, receiverName, receiverAccount, comment):
+        U = 16
+        res1 = ''.join(random.choices(string.digits, k=U))
+        txnId = str(res1)
+        create_log = TransactionHistory(transId=txnId, 
+                                        transAmount=transAmount, senderName=senderName, 
+                                        senderAccount=senderAccount, receiverName=receiverName,
+                                        receiverAccount=receiverAccount, comment=comment)
+        create_log.save()
         pass

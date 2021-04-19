@@ -10,7 +10,9 @@ from rest_framework_simplejwt.views import (
 urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('createUser', views.createUser),
+    path('createUser', views.createUser, name='createUser'),
+    path('allUser', views.allUser),
+    path('deleteUser/<id>', views.deleteUser),
     path('createOffice', views.createOffice),
     path('offices', views.offices),
     path('createCustomer', views.createCustomer),
@@ -31,6 +33,7 @@ urlpatterns = [
     path('closeBal', views.closeBal),
     path('loanApply', views.loanApply),
     path('allLoan', views.allLoan),
+    path('create_loan', views.create_loan),
     path('approveLoan', views.approveLoan),
     path('smsTwilio', views.smsTwilio),
 ]
