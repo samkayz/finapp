@@ -2,6 +2,7 @@ from finappservice.models import *
 from twilio.rest import Client
 import random
 import string
+from django.shortcuts import get_object_or_404
 
 
 
@@ -21,6 +22,15 @@ class App:
         last_act = Account.objects.all().order_by('id').last()
         if not last_act:
             return '1000000000'
+        AccountNumberId = last_act.accounNumber
+        acct_int = int(AccountNumberId)
+        newAccountNumber = acct_int + 1
+        return newAccountNumber
+    
+    def InternalAccountNumber(self):
+        last_act = InternalAccount.objects.all().order_by('id').last()
+        if not last_act:
+            return '7000000000'
         AccountNumberId = last_act.accounNumber
         acct_int = int(AccountNumberId)
         newAccountNumber = acct_int + 1
@@ -57,13 +67,13 @@ class App:
         return client
 
 
-    def accountType(self):
-        last_id = AccountCategory.objects.all().order_by('id').last()
-        if not last_id:
-            return '1'
-        acctId = int(last_id.accountId)
-        newId = acctId + 1
-        return newId
+    # def accountType(self):
+    #     last_id = AccountCategory.objects.all().order_by('id').last()
+    #     if not last_id:
+    #         return '1'
+    #     acctId = int(last_id.accountId)
+    #     newId = acctId + 1
+    #     return newId
 
 
     def RegisterUser(self, username, staffname, email, role, password, staffid):
@@ -126,4 +136,32 @@ class App:
                                         senderAccount=senderAccount, receiverName=receiverName,
                                         receiverAccount=receiverAccount, comment=comment)
         create_log.save()
+        pass
+    
+    def checkProduct(self, code):
+        if Products.objects.filter(product_code=code).exists() == True:
+            return True
+        else:
+            return False
+    
+    def createInternalAccount(self, product_code, product_name, account_number):
+        create_internal = InternalAccount(product_code=product_code, product_name=product_name, account_number=account_number)
+        create_internal.save()
+        pass
+    
+    
+    def UpdateInternalAccountBal(self, product_code, amount, frm_acct, comment):
+        U = 16
+        res1 = ''.join(random.choices(string.digits, k=U))
+        txnId = str(res1)
+        acct = get_object_or_404(InternalAccount, product_code=product_code)
+        product = get_object_or_404(Products, product_code=product_code)
+        bal = acct.working_bal
+        amt = float(amount)
+        newBal = (amt + bal)
+        InternalAccount.objects.filter(product_code=product_code).update(prev_bal=bal, working_bal=newBal)
+        
+        ##  Create Internal Wallet Log
+        log = InternalTransactHistory(product_code=product_code, txn_id=txnId, frm_acct=frm_acct, amount=amount, to_acct=acct.account_number, comment=comment, product_name=product.product_name)
+        log.save()
         pass

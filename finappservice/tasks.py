@@ -36,14 +36,15 @@ def checkLoanExpiringDate():
         if account_detail.workingBalance == 0.0: continue
         if loans.loan_paid == True: continue
         if loans.pay_day > now: continue
+        if loans.loanBal == 0: continue
         
         ## Check The Account for Loan
         
-        if loans.loanAmount > account_detail.workingBalance:
+        if loans.loanBal > account_detail.workingBalance:
             ## Do Calculation
-            to_pay = loans.loanAmount - account_detail.workingBalance
+            to_pay = loans.loanBal - account_detail.workingBalance
             
-            amount = loans.loanAmount - to_pay
+            amount = loans.loanBal - to_pay
             ## Update Loan
             updateLoan = LoanApplication.objects.filter(loanId=loans.loanId)
             updateLoan.update(loanBal=to_pay)
@@ -52,11 +53,14 @@ def checkLoanExpiringDate():
             updateAccount = Account.objects.filter(accounNumber=loans.accountNumber, customerId=loans.customerId)
             updateAccount.update(previousBalance=account_detail.workingBalance, workingBalance=0)
             
+            newapp.UpdateInternalAccountBal(loans.loan_code, amount, loans.accountNumber, comment='Loan Repayment')
+            
             newapp.createLog(amount, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment')
+            pass
         
         else: 
             ## Do Calculation
-            bal =  account_detail.workingBalance - loans.loanAmount
+            bal =  account_detail.workingBalance - loans.loanBal
             
             ## Update Loan
             updateLoan = LoanApplication.objects.filter(loanId=loans.loanId)
@@ -66,10 +70,9 @@ def checkLoanExpiringDate():
             updateAccount = Account.objects.filter(accounNumber=loans.accountNumber, customerId=loans.customerId)
             updateAccount.update(previousBalance=account_detail.workingBalance, workingBalance=bal)
             
-            newapp.createLog(loans.loanAmount, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment')
-        
-    
-    pass
+            newapp.UpdateInternalAccountBal(loans.loan_code, loans.loanBal, loans.accountNumber, comment='Loan Repayment')
+            newapp.createLog(loans.loanBal, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment')
+            pass
             
         
         

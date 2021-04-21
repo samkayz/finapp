@@ -754,7 +754,9 @@ def create_loan(request):
     
     else:
         createLoanType = LoanType(loan_name=loanName, loan_code=loan_code, loan_duration=loan_duration)
+        prod = Products(product_code=loan_code, product_name=loanName)
         createLoanType.save()
+        prod.save()
         data = {
             "code": status.HTTP_200_OK,
             "success": True, 
@@ -931,3 +933,289 @@ def smsTwilio(request):
         if tsms.is_valid():
             tsms.save()
         return Response(data=tsms.data, status=status.HTTP_200_OK)
+    
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_internal_account(request):
+    productCode = request.data.get('productCode')
+    accountName = request.data.get('accountName')
+    
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif productCode == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "product code can't be empty"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif functionClass.checkProduct(productCode) == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Invalid product code"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif accountName == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Account Name can't be empty"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif InternalAccount.objects.filter(product_code=productCode).exists():
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Internal Account for this product exist"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        acctNo = functionClass.InternalAccountNumber()
+        functionClass.createInternalAccount(productCode, accountName, acctNo)
+        
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message": "created"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+    
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteInternaAccount(request, code):
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif InternalAccount.objects.filter(product_code=code).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Wrong Product Code"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        deleteInstance = InternalAccount.objects.filter(product_code=code)
+        deleteInstance.delete()
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message": "internal account deleted"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+    
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def updateInternalAccount(request, code):
+    accountName = request.data.get('accountName')
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif InternalAccount.objects.filter(product_code=code).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Invalid product code"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif accountName == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Account name can't be empty"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        updateInstance = InternalAccount.objects.filter(product_code=code)
+        updateInstance.update(product_name=accountName)
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message": "internal account updated"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def allInternalAccount(request):
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        snippet = InternalAccount.objects.filter()
+        serializer = InternalAccountSerializer(instance=snippet, many=True)
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "content": serializer.data
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+    
+   
+    
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def addCurrency(request):
+    currencyCode = request.data.get('currencyCode')
+    currencyName = request.data.get('currencyName')
+    active = request.data.get('active')
+    
+    if currencyCode is None:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "currencyCode Fields required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif currencyName is None:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "currencyName Fields required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif currencyCode == "":
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Currency Code can't be empty"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif currencyName == "":
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Currency Name can't be empty"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif active == "" or type(active) != bool:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Currency active must be boolean True/False"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif Currency.objects.filter(cur_code=currencyCode).exists():
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Currency Exist"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        if active == True:
+            Currency.objects.filter(active=True).update(active=False)
+            
+            crt_cur = Currency(cur_code=currencyCode, cur_name=currencyName, active=True)
+            crt_cur.save()
+            data = {
+                "code": status.HTTP_200_OK,
+                "success": True,
+                "message": "Currency Created"
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+            
+        else:
+            crt_cur = Currency(cur_code=currencyCode, cur_name=currencyName)
+            crt_cur.save()
+            data = {
+                "code": status.HTTP_200_OK,
+                "success": True,
+                "message": "Currency Created"
+            }
+            return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def allCurrency(request):
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        snippet = Currency.objects.filter()
+        serializedData = CurrencySerializer(instance=snippet, many=True)
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "content": serializedData.data
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+    
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteCurrency(request, code):
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif Currency.objects.filter(cur_code=code).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Invalid Currency Code"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        Currency.objects.filter(cur_code=code).delete()
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message":" Currency deleted"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)

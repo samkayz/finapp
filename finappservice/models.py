@@ -223,6 +223,15 @@ class LoanType(models.Model):
         db_table = 'loan_type'
 
 
+class Products(models.Model):
+    product_code = models.CharField(max_length=255)
+    product_name = models.CharField(max_length=255)
+    date_created = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'products'
+        
+
 class LoanApplication(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE)
     loanId = models.CharField(max_length=255)
@@ -251,3 +260,40 @@ class Twilio(models.Model):
 
     class Meta:
         db_table = 'twilio'
+        
+        
+class InternalAccount(models.Model):
+    product_code = models.TextField(null=True, blank=True)
+    product_name = models.TextField(null=True, blank=True)
+    account_number = models.TextField(null=True, blank=True)
+    prev_bal = models.FloatField(default=0)
+    working_bal = models.FloatField(default=0)
+    
+    class Meta:
+        db_table = 'internal_account'
+        
+
+
+class InternalTransactHistory(models.Model):
+    product_code = models.TextField(null=True, blank=True)
+    txn_id = models.TextField(null=True, blank=True)
+    frm_acct = models.TextField(null=True, blank=True)
+    to_acct = models.TextField(null=True, blank=True)
+    amount = models.FloatField(null=True, blank=True)
+    comment = models.TextField(null=True, blank=True)
+    product_name = models.TextField(null=True, blank=True)
+    date_created = models.DateTimeField(auto_now=True, null=True)
+    
+    
+    class Meta:
+        db_table = 'internal_history'
+        
+        
+class Currency(models.Model):
+    cur_code = models.CharField(max_length=100)
+    cur_name = models.TextField(null=True, blank=True)
+    active = models.BooleanField(default=False)
+    date_created = models.DateTimeField(auto_now=True, null=True)
+    
+    class Meta:
+        db_table = 'currency'

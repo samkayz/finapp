@@ -36,4 +36,11 @@ urlpatterns = [
     path('create_loan', views.create_loan),
     path('approveLoan', views.approveLoan),
     path('smsTwilio', views.smsTwilio),
+    path('create_internal_account', views.create_internal_account),
+    path('deleteInternaAccount/<code>', views.deleteInternaAccount),
+    path('updateInternalAccount/<code>', views.updateInternalAccount),
+    path('allInternalAccount', views.allInternalAccount),
+    path('addCurrency', views.addCurrency),
+    path('allCurrency', views.allCurrency),
+    path('deleteCurrency/<code>', views.deleteCurrency),
 ]

@@ -107,3 +107,16 @@ class userSerializer(serializers.ModelSerializer):
         'username', 'email', 'staffname', 'staffid', 
         'is_staff', 'date_joined', 'is_active', 
         'is_teller', 'is_customer_service', 'is_head_teller']
+        
+
+
+class InternalAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InternalAccount
+        fields = "__all__"
+
+
+class CurrencySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Currency
+        fields = "__all__"
