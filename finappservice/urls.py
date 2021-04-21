@@ -35,6 +35,8 @@ urlpatterns = [
     path('allLoan', views.allLoan),
     path('create_loan', views.create_loan),
     path('approveLoan', views.approveLoan),
+    path('editLoan/<code>', views.editLoan),
+    path('deleteLoanProduct/<code>', views.deleteLoanProduct),
     path('smsTwilio', views.smsTwilio),
     path('create_internal_account', views.create_internal_account),
     path('deleteInternaAccount/<code>', views.deleteInternaAccount),

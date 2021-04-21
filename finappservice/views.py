@@ -737,24 +737,47 @@ def create_loan(request):
     loan_code = str(res1)
     loanName = request.data.get('loanName')
     loan_duration = request.data.get('duration')
-
-    if request.user.is_superuser == False:
+    interest = request.data.get('interest')
+    if loanName is None or loanName == '':
         data = {
-            "status": status.HTTP_400_BAD_REQUEST,
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "loanName field required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif loan_duration is None or loan_duration == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "duration field required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif interest is None or interest == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "interest field required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
             "message": "Permission denied"
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
     elif LoanType.objects.filter(Q(loan_name__startswith=loanName) | Q(loan_name__endswith=loanName)):
         data = {
-            "status": status.HTTP_400_BAD_REQUEST,
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
             "message": "Name already exist"
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
     else:
-        createLoanType = LoanType(loan_name=loanName, loan_code=loan_code, loan_duration=loan_duration)
-        prod = Products(product_code=loan_code, product_name=loanName)
+        createLoanType = LoanType(loan_name=loanName, loan_code=loan_code, loan_duration=loan_duration, interest=interest)
+        prod = Products(product_code=loan_code, product_name=f'{loanName}-Loan')
         createLoanType.save()
         prod.save()
         data = {
@@ -766,6 +789,92 @@ def create_loan(request):
             }
         }
         return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def editLoan(request, code):
+    loanName = request.data.get('loanName')
+    duration = request.data.get('duration')
+    interest = request.data.get('interest')
+    if loanName is None or loanName == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "loanName field required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif duration is None or duration == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "duration field required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif interest is None or interest == '':
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "interest field required"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Permission denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+
+    elif LoanType.objects.filter(loan_code=code).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Wrong loan Code"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        LoanType.objects.filter(loan_code=code).update(loan_name=loanName, loan_duration=duration, interest=interest)
+        Products.objects.filter(product_code=code).update(product_name=f'{loanName}-Loan')
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message": "Loan product updated"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def deleteLoanProduct(request, code):
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Permission denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+
+    elif LoanType.objects.filter(loan_code=code).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Wrong loan Code/ Loan product doesn't exist"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    else:
+        LoanType.objects.filter(loan_code=code).delete()
+        Products.objects.filter(product_code=code).delete()
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message": "Loan product deleted"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+
 
 
 @api_view(['POST'])
@@ -809,6 +918,9 @@ def loanApply(request):
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     else:
+        interest = functionClass.calculateLoanInterest(loanAmount, loanType)
+        totalLoan = float(loanAmount) + interest
+
         cusId = get_object_or_404(Account, accounNumber=accountNumber)
         custDetail = get_object_or_404(Customer, customerId=cusId.customerId)
         loanDetail = get_object_or_404(LoanType, loan_code=loanType)
@@ -820,7 +932,7 @@ def loanApply(request):
         loanAmount=loanAmount, 
         dateApply=tday, 
         loanOfficer=loanOfficer, duration=loanDetail.loan_duration,
-        loan_code=loanType, loanBal=loanAmount, customer_id=custDetail.id)
+        loan_code=loanType, loanBal=totalLoan, customer_id=custDetail.id)
         createLoan.save()
         # serializer = LoanApplicationSerializer(data=data)
         # if serializer.is_valid():

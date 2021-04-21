@@ -217,6 +217,7 @@ class LoanType(models.Model):
     loan_code = models.TextField(null=True, blank=True)
     loan_name = models.TextField(null=True, blank=True)
     loan_duration = models.BigIntegerField(null=True, blank=True)
+    interest = models.FloatField(null=True)
     date_created = models.DateTimeField(auto_now=True)
 
     class Meta:

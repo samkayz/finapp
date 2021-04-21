@@ -33,9 +33,10 @@ def checkLoanExpiringDate():
     all_loan = LoanApplication.objects.filter()
     for loans in all_loan:
         account_detail = get_object_or_404(Account, accounNumber=loans.accountNumber, customerId=loans.customerId)
+        if loans.loan_approve == False: continue
         if account_detail.workingBalance == 0.0: continue
         if loans.loan_paid == True: continue
-        if loans.pay_day > now: continue
+        if  loans.pay_day == None or loans.pay_day > now: continue
         if loans.loanBal == 0: continue
         
         ## Check The Account for Loan

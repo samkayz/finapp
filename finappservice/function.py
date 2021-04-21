@@ -165,3 +165,11 @@ class App:
         log = InternalTransactHistory(product_code=product_code, txn_id=txnId, frm_acct=frm_acct, amount=amount, to_acct=acct.account_number, comment=comment, product_name=product.product_name)
         log.save()
         pass
+
+    def calculateLoanInterest(self, amount, loan_code):
+        ln_p = get_object_or_404(LoanType, loan_code=loan_code)
+        amt = float(amount)
+        intrate = float(ln_p.interest)
+        interestAmount = amt * intrate / 100
+        finalInterest = round(interestAmount, 2)
+        return finalInterest
