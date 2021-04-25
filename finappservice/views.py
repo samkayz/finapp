@@ -22,7 +22,7 @@ now = (datetime.strftime(base_date_time, "%Y-%m-%d"))
 
 
 @api_view(['POST'])
-@permission_classes([])
+@permission_classes([IsAuthenticated])
 def createUser(request):
     U = 6
     res = ''.join(random.choices(string.digits, k=U))
@@ -34,24 +34,32 @@ def createUser(request):
     role = request.data.get('role')
     password = request.data.get('password')
     re_password = request.data.get('re_password')
-
-    if password == re_password:
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Permission denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif password == re_password:
         if functionClass.CheckUsername(username) == True:
             data = {
-                'status': status.HTTP_400_BAD_REQUEST,
+                "code": status.HTTP_400_BAD_REQUEST,
+                "success": False,
                 'message': "Username Taken"
             }
             return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
         elif functionClass.CheckEmail(email) == True:
             data = {
-                'status': status.HTTP_400_BAD_REQUEST,
+                "code": status.HTTP_400_BAD_REQUEST,
+                "success": False,
                 'message': "Email Taken"
             }
             return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
         
         else:
-            if role == 'tl' or role == 'cs':
+            if role == 'tl' or role == 'cs' or role == 'htl' or role == 'spu':
                 functionClass.RegisterUser(username, staffname, email, role, password, staffid)
                 data = {
                     'status': status.HTTP_200_OK,
@@ -62,14 +70,16 @@ def createUser(request):
                 
             else:
                 data = {
-                    'status': status.HTTP_400_BAD_REQUEST,
+                    "code": status.HTTP_400_BAD_REQUEST,
+                    "success": False,
                     'message': "Invalid Role"
                 }
                 return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
     else:
         data = {
-            'status': status.HTTP_400_BAD_REQUEST,
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
             'message': "password mismatch"
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
@@ -219,7 +229,14 @@ def createCustomer(request):
     # Customer Identification
     modeOfId = request.data.get('modeOfId')
     idNo = request.data.get('idNo')
-    if Customer.objects.filter(mnemonic=mnemonic).exists():
+    if Branch.objects.filter(branchcode=branch).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Invalid Branch"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif Customer.objects.filter(mnemonic=mnemonic).exists():
         error = {
             "code": status.HTTP_400_BAD_REQUEST,
             "message": "Sorry Mnemonic alrealdy used",
@@ -471,29 +488,44 @@ def openBal(request):
     openBal = request.data.get('openBal')
 
     try:
-        tid = Teller.objects.all().get(tellerId=tellerId)
-        tba = TellerBalance.objects.filter(tellerId=tellerId, openDate=openOn).exists()
+        tid = get_object_or_404(Teller, tellerId=tellerId)
+        tba = TellerBalance.objects.filter(tellerId=tellerId, openDate__startswith=openOn, bal_open=True).exists()
     except:
-        error = {
-            "message": "TellerId not Found"
-        }
-        return Response(data=error, status=status.HTTP_207_MULTI_STATUS)
-    if tba:
-        msg = {
-            "message": "Teller Business Already Open for the day"
-        }
-        return Response(data=msg, status=status.HTTP_200_OK)
-    else:
         data = {
-            "user": tid.user_id,
-            "tellerId": tid.tellerId,
-            "openDate": openOn,
-            "openBal": openBal,
-            "bal": openBal
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Teller Not Found"
         }
-        serializer = TellerBalanceSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    if request.user.is_head_teller == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Permission denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif tba:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Teller Business of the Day already open"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        create_ = TellerBalance(tellerId=tid.tellerId, openBal=openBal, bal=openBal, user_id=tid.user_id)
+        day_bus = TellerDayBusiness(teller_id=tid.tellerId)
+        create_.save()
+        day_bus.save()
+
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "response": {
+                "tellerId": tid.tellerId,
+                "openBal": openBal,
+                "bal": openBal
+            }
+        }
         return Response(data=data, status=status.HTTP_200_OK)
 
 
@@ -519,99 +551,60 @@ def checkCurrentTellerBal(request, telleId):
 @permission_classes([IsAuthenticated])
 def operate(request):
     client = twilioAuth()
+    staffId = request.user.staffid
     U = 10
     res1 = ''.join(random.choices(string.digits, k=U))
     txn1 = str(res1)
     tranId = "TR|" + txn1
     base_date_time = datetime.now()
     tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
+
     acctNo = request.data.get('accountNumber')
     transType = request.data.get('transType')
     amount = request.data.get('amount')
-    tellerId = request.data.get('tellerId')
     senderName = request.data.get('senderName')
     receiverName = request.data.get('receiverName')
     comment = request.data.get('comment')
 
     amt = float(amount)
-    c_acct = Account.objects.all().get(accounNumber=acctNo)
-    phone = Addresstable.objects.values('mobileNo').get(mnemonic=c_acct.mnemonic)['mobileNo']
-    #Teller Detail
-    tdetail = Teller.objects.all().get(tellerId=tellerId)
-    t_bal = TellerBalance.objects.all().get(tellerId=tellerId, openDate=tday)
-
-    rp = list(acctNo)
-    rp[5] = '*'
-    rp[6] = '*'
-    rp[7] = '*'
-    rp[8] = '*'
-    ac_rp = ''.join([str(elem) for elem in rp])
-    #print(ac_rp)
-    if t_bal.status == 'close':
-        err = {
-            "status": status.HTTP_400_BAD_REQUEST,
-            "message": "Teller operation is closed for the day"
+    
+    if request.user.is_teller == False or request.user.is_head_teller == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Permission Denied"
         }
-        return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
-    elif transType == "CR":
-        # Get Customer Balance
-
-        #Update Previous Balance
-        pbal = c_acct.workingBalance
-        Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
-
-        # Update Working Balance 
-        wbal = c_acct.workingBalance + amt
-        Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
-
-        #Update Teller Balance
-        tbal = t_bal.bal + amt
-        TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
-
-        #Update Teller Transaction History
-
-        tdata = {
-            "user_id": t_bal.user_id,
-            "tellerId": t_bal.tellerId,
-            "transAmount": amt,
-            "transAccount": acctNo,
-            "transType": "CR",
-            "transDate": tday,
-            "tellerName": tdetail.tellerName
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif TellerBalance.objects.filter(tellerId=staffId, openDate__startswith=tday).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Till has not been open for the day/Till close for the day"
         }
-        tdataserializer = TellerTransactionHistorySerializer(data=tdata)
-        if tdataserializer.is_valid():
-            tdataserializer.save()
-
-        #Update Customer History
-        cdata = {
-            "transId": tranId,
-            "transDate": tday,
-            "transAmount": amt,
-            "senderName": senderName,
-            "receiverName": c_acct.accountName,
-            "receiverAccount": acctNo,
-            "comment": comment
-        }
-        cdataserializer = TransactionSerializer(data=cdata)
-        if cdataserializer.is_valid():
-            cdataserializer.save()
-
-        #Send Message to Customer
-
-        # message = client.messages.create(
-        # to=phone, 
-        # from_="+12018906990",
-        # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: CR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
-
-        #print(message.sid)
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     else:
-        if amt > c_acct.workingBalance:
-            error = {
-                "message": "Insufficient Balance"
+        c_acct = get_object_or_404(Account, accounNumber=acctNo)
+
+        phone = Addresstable.objects.values('mobileNo').get(mnemonic=c_acct.mnemonic)['mobileNo']
+        #Teller Detail
+        tdetail = get_object_or_404(Teller, tellerId=staffId)
+
+        t_bal = get_object_or_404(TellerBalance, tellerId=staffId, openDate__startswith=tday)
+
+        rp = list(acctNo)
+        rp[5] = '*'
+        rp[6] = '*'
+        rp[7] = '*'
+        rp[8] = '*'
+        ac_rp = ''.join([str(elem) for elem in rp])
+        #print(ac_rp)
+        if t_bal.status == 'close':
+            err = {
+                "status": status.HTTP_400_BAD_REQUEST,
+                "message": "Teller operation is closed for the day"
             }
-            return Response(data=error, status=status.HTTP_401_UNAUTHORIZED)
-        else:
+            return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
+        elif transType == "CR":
             # Get Customer Balance
 
             #Update Previous Balance
@@ -619,11 +612,11 @@ def operate(request):
             Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
 
             # Update Working Balance 
-            wbal = c_acct.workingBalance - amt
+            wbal = c_acct.workingBalance + amt
             Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
 
             #Update Teller Balance
-            tbal = t_bal.bal - amt
+            tbal = t_bal.bal + amt
             TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
 
             #Update Teller Transaction History
@@ -633,7 +626,7 @@ def operate(request):
                 "tellerId": t_bal.tellerId,
                 "transAmount": amt,
                 "transAccount": acctNo,
-                "transType": "DR",
+                "transType": "CR",
                 "transDate": tday,
                 "tellerName": tdetail.tellerName
             }
@@ -654,26 +647,83 @@ def operate(request):
             cdataserializer = TransactionSerializer(data=cdata)
             if cdataserializer.is_valid():
                 cdataserializer.save()
-        # message = client.messages.create(
-        # to=phone, 
-        # from_="+12018906990",
-        # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: DR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
 
-    suc = {
-        "message": "Transaction Successful"
-    }
-    return Response(data=suc, status=status.HTTP_200_OK)
+            #Send Message to Customer
+
+            # message = client.messages.create(
+            # to=phone, 
+            # from_="+12018906990",
+            # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: CR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
+
+            #print(message.sid)
+        else:
+            if amt > c_acct.workingBalance:
+                error = {
+                    "message": "Insufficient Balance"
+                }
+                return Response(data=error, status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                # Get Customer Balance
+
+                #Update Previous Balance
+                pbal = c_acct.workingBalance
+                Account.objects.filter(accounNumber=acctNo).update(previousBalance=pbal)
+
+                # Update Working Balance 
+                wbal = c_acct.workingBalance - amt
+                Account.objects.filter(accounNumber=acctNo).update(workingBalance=wbal)
+
+                #Update Teller Balance
+                tbal = t_bal.bal - amt
+                TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
+
+                #Update Teller Transaction History
+
+                tdata = {
+                    "user_id": t_bal.user_id,
+                    "tellerId": t_bal.tellerId,
+                    "transAmount": amt,
+                    "transAccount": acctNo,
+                    "transType": "DR",
+                    "transDate": tday,
+                    "tellerName": tdetail.tellerName
+                }
+                tdataserializer = TellerTransactionHistorySerializer(data=tdata)
+                if tdataserializer.is_valid():
+                    tdataserializer.save()
+
+                #Update Customer History
+                cdata = {
+                    "transId": tranId,
+                    "transDate": tday,
+                    "transAmount": amt,
+                    "senderName": senderName,
+                    "receiverName": c_acct.accountName,
+                    "receiverAccount": acctNo,
+                    "comment": comment
+                }
+                cdataserializer = TransactionSerializer(data=cdata)
+                if cdataserializer.is_valid():
+                    cdataserializer.save()
+            # message = client.messages.create(
+            # to=phone, 
+            # from_="+12018906990",
+            # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: DR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
+
+        suc = {
+            "message": "Transaction Successful"
+        }
+        return Response(data=suc, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def enquiry(request):
     acctNo = request.data.get('accountNumber')
-    transDate = request.data.get('transDate')
     transId = request.data.get('transId')
 
     try:
-        show = TransactionHistory.objects.filter(Q(receiverAccount=acctNo) | Q(transDate=transDate) | Q(transId=transId))
+        show = TransactionHistory.objects.filter(Q(receiverAccount=acctNo) | Q(senderAccount=acctNo) | Q(transId=transId))
     except:
         error = {
             "message": "Invalid parameter or Detail not Found"
@@ -690,42 +740,61 @@ def enquiry(request):
 def closeBal(request):
     tellerId = request.data.get('tellerId')
     user_id = request.user.id
+    staffId = request.user.staffid
     base_date_time = datetime.now()
     tday = (datetime.strftime(base_date_time, "%Y-%m-%d"))
-
-    try:
-        cbal = get_object_or_404(TellerBalance, tellerId=tellerId, openDate=tday)
-        # cbal = TellerBalance.objects.all().get(tellerId=tellerId, openDate=tday)
-    except:
-        error = {
+    
+    if request.user.is_teller == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
             "message": "Permission denied"
         }
-        return Response(data=error, status=status.HTTP_204_NO_CONTENT)
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
     
-    if cbal.status == "open":
-        # Update Close Balance
-        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(closeBal=cbal.bal)
-
-        # Update Close Date
-        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(closeDate=tday)
-
-        #Total Transaction 
-        t_trans = cbal.bal - cbal.openBal
-
-        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(totaltran=t_trans)
-
-        # Close the Status
-        TellerBalance.objects.filter(user_id=user_id, openDate=tday).update(status='close')
-
-        sus = {
-            "message": "Teller Close for the day business"
+    elif TellerBalance.objects.filter(tellerId=staffId, openDate__startswith=tday).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Till has not been open for the day/Till close for the day"
         }
-        return Response(data=sus, status=status.HTTP_200_OK)
-    else:
-        msg = {
-            "message": "Teller Business already close for the day"
-        }
-        return Response(data=msg, status=status.HTTP_200_OK)
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+
+    else:  
+        cbal = get_object_or_404(TellerBalance, Q(user_id=user_id) | Q(openDate__startswith=tday))
+        if cbal.user_id != user_id:
+            data = {
+                "code": status.HTTP_400_BAD_REQUEST,
+                "success": False,
+                "message": "Permission denied"
+            }
+            return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+        
+        elif cbal.bal_open == True:
+
+            #Total Transaction 
+            t_trans = cbal.openBal - cbal.bal
+
+            # Update Close Balance
+            tb = TellerDayBusiness.objects.filter(teller_id=cbal.tellerId, open_date__startswith=tday)
+            tb.update(working_bal=cbal.openBal, closing_bal=cbal.bal, close_date=base_date_time, till_open=False, total_trans=t_trans)
+
+            dteller = TellerBalance.objects.filter(tellerId=cbal.tellerId, openDate__startswith=tday)
+            dteller.delete()
+
+            sus = {
+                "code": status.HTTP_200_OK,
+                "success": True,
+                "message": "Teller Close for the day business"
+            }
+            return Response(data=sus, status=status.HTTP_200_OK)
+        else:
+            msg = {
+                "code": status.HTTP_208_ALREADY_REPORTED,
+                "success": False,
+                "message": "Teller Business already close for the day"
+            }
+            return Response(data=msg, status=status.HTTP_200_OK)
 
 
 

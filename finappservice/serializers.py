@@ -36,24 +36,11 @@ class IdentificationIdSerializer(serializers.ModelSerializer):
         model = IdentificationId
         fields = ['modeOfId', 'idNo']
 
-class CustomerSerializer(serializers.ModelSerializer):
-    address = AddresstableSerializer(many=True)
-    ModeOfId = IdentificationIdSerializer(many=True)
-    class Meta:
-        model = Customer
-        fields = ['id', 'branchcode', 'customerId', 'firstname', 'lastname', 'mnemonic', 'activationDate', 'submittedDate', 'active', 'address', 'ModeOfId']
-
-
-class AccountCategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = AccountType
-        fields = "__all__"
-
 
 class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
-        fields = "__all__"
+        fields = ['customerId', 'mnemonic', 'accounNumber', 'previousBalance', 'workingBalance', 'accountType', 'active']
 
 
 class ViewCustomerAccountsSerializer(serializers.ModelSerializer):
@@ -62,6 +49,27 @@ class ViewCustomerAccountsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = ['customerId', 'firstname', 'lastname', 'branchcode', 'account']
+
+
+# class AccountFilter(serializers.ModelSerializer):
+#     class Meta:
+#         model = Account
+#         fields = ['customerId', 'mnemonic', 'accounNumber', 'previousBalance', 'workingBalance', 'accountType', 'active']
+
+class CustomerSerializer(serializers.ModelSerializer):
+    address = AddresstableSerializer(many=True)
+    ModeOfId = IdentificationIdSerializer(many=True)
+    account = AccountSerializer(many=True)
+    class Meta:
+        model = Customer
+        fields = ['id', 'branchcode', 'customerId', 'firstname', 'lastname', 'mnemonic', 'activationDate', 'submittedDate', 'active', 'address', 'ModeOfId', 'account']
+
+
+class AccountCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountType
+        fields = "__all__"
+
 
 
 class TransactionSerializer(serializers.ModelSerializer):

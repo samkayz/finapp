@@ -83,6 +83,15 @@ class App:
             teller = Teller(tellerId=staffid, tellerName=staffname, user=user)
             teller.save()
             pass
+        elif role == 'htl':
+            user = User.objects.create_user(username=username, staffname=staffname, email=email, staffid=staffid, is_teller=True, is_head_teller=True, password=password)
+            user.save()
+            teller = Teller(tellerId=staffid, tellerName=staffname, user=user, is_head_teller=True)
+            teller.save()
+            pass
+        elif role == 'spu':
+            user = User.objects.create_user(username=username, staffname=staffname, email=email, staffid=staffid, is_superuser=True, password=password)
+            user.save()
         else:
             user = User.objects.create_user(username=username, staffname=staffname, staffid=staffid, email=email, is_customer_service=True, password=password)
             user.save()

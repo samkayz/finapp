@@ -188,13 +188,10 @@ class CustomerService(models.Model):
 class TellerBalance(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     tellerId = models.CharField(max_length=100)
-    openDate = models.CharField(max_length=100)
+    openDate = models.DateTimeField(auto_now=True)
     openBal = models.FloatField()
-    bal = models.FloatField(default='0')
-    closeDate = models.CharField(max_length=100, blank=True)
-    closeBal = models.FloatField(default='0')
-    totaltran = models.CharField(max_length=255, blank=True)
-    status = models.CharField(max_length=100, default='open')
+    bal = models.FloatField(default=0)
+    bal_open = models.BooleanField(default=True)
 
     class Meta:
         db_table = 'teller_balance'
@@ -211,6 +208,19 @@ class TellerTransactionHistory(models.Model):
 
     class Meta:
         db_table = 'teller_transaction_history'
+
+
+class TellerDayBusiness(models.Model):
+    teller_id = models.TextField(null=True, blank=True)
+    open_date = models.DateTimeField(auto_now=True)
+    working_bal = models.FloatField(null=True)
+    closing_bal = models.FloatField(null=True)
+    close_date = models.DateTimeField(null=True)
+    total_trans = models.FloatField(null=True)
+    till_open = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'teller_day_business'
 
 
 class LoanType(models.Model):
