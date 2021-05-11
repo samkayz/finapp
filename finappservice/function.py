@@ -136,14 +136,14 @@ class App:
         pass
 
     
-    def createLog(self, transAmount, senderName, senderAccount, receiverName, receiverAccount, comment):
+    def createLog(self, transAmount, senderName, senderAccount, receiverName, receiverAccount, comment, txn_type):
         U = 16
         res1 = ''.join(random.choices(string.digits, k=U))
         txnId = str(res1)
         create_log = TransactionHistory(transId=txnId, 
                                         transAmount=transAmount, senderName=senderName, 
                                         senderAccount=senderAccount, receiverName=receiverName,
-                                        receiverAccount=receiverAccount, comment=comment)
+                                        receiverAccount=receiverAccount, comment=comment, txn_type=txn_type)
         create_log.save()
         pass
     

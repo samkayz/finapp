@@ -311,41 +311,51 @@ def allAcctCategory(request):
 def openAccount(request):
     customerId = request.data.get('customerId')
     accountTypeId = request.data.get('accountTypeId')
-
     try:
-        cust = Customer.objects.all().get(customerId=customerId)
-        actype = AccountType.objects.all().get(id=accountTypeId)
-
-        if Account.objects.filter(customerId=customerId, accountTypeId=accountTypeId).exists():
-            data = {
-                "code": status.HTTP_400_BAD_REQUEST,
-                "message": "Customer have same type of account",
-                "status": "fail"
-            }
-            return Response(data=data)
-        else:
-            newAccount = functionClass.AccountNumber()
-            data = {
-                "customer": cust.id,
-                "customerId": customerId,
-                "mnemonic": cust.mnemonic,
-                "accounNumber": newAccount,
-                "accountTypeId": actype.id,
-                "accountType": actype.name,
-                "createdBy": request.user.staffname,
-                "accountName": cust.firstname + ' ' + cust.lastname,
-            }
-            serializer = AccountSerializer(data=data)
-            if serializer.is_valid():
-                serializer.save()
-            return Response(data=serializer.data, status=status.HTTP_200_OK)
+        actype = get_object_or_404(AccountType, id=accountTypeId)
     except:
         data = {
             "code": status.HTTP_400_BAD_REQUEST,
-            "message": "customer ID/Account type not exist",
-            "status": "fail"
+            "success": False,
+            "message": "Invalid Account type"
         }
         return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        cust = get_object_or_404(Customer, customerId=customerId)
+    except:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Invalid Customer ID"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+        
+
+    if Account.objects.filter(customerId=customerId, accountTypeId=accountTypeId).exists():
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "message": "Customer have same type of account",
+            "status": "fail"
+        }
+        return Response(data=data)
+    else:
+        print(cust.id)
+        newAccount = functionClass.AccountNumber()
+        data = {
+            "customer": cust.id,
+            "customerId": customerId,
+            "mnemonic": cust.mnemonic,
+            "accounNumber": newAccount,
+            "accountTypeId": actype.id,
+            "accountType": actype.name,
+            "createdBy": request.user.staffname,
+            "accountName": cust.firstname + ' ' + cust.lastname,
+        }
+        serializer = AccountCreateSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
@@ -550,7 +560,7 @@ def checkCurrentTellerBal(request, telleId):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def operate(request):
-    client = twilioAuth()
+    # client = twilioAuth()
     staffId = request.user.staffid
     U = 10
     res1 = ''.join(random.choices(string.digits, k=U))
@@ -567,8 +577,8 @@ def operate(request):
     comment = request.data.get('comment')
 
     amt = float(amount)
-    
-    if request.user.is_teller == False or request.user.is_head_teller == False:
+    print(staffId)
+    if request.user.is_teller == False:
         data = {
             "code": status.HTTP_400_BAD_REQUEST,
             "success": False,
@@ -598,13 +608,8 @@ def operate(request):
         rp[8] = '*'
         ac_rp = ''.join([str(elem) for elem in rp])
         #print(ac_rp)
-        if t_bal.status == 'close':
-            err = {
-                "status": status.HTTP_400_BAD_REQUEST,
-                "message": "Teller operation is closed for the day"
-            }
-            return Response(data=err, status=status.HTTP_400_BAD_REQUEST)
-        elif transType == "CR":
+        
+        if transType == "CR":
             # Get Customer Balance
 
             #Update Previous Balance
@@ -617,12 +622,12 @@ def operate(request):
 
             #Update Teller Balance
             tbal = t_bal.bal + amt
-            TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
+            TellerBalance.objects.filter(tellerId=staffId, openDate__startswith=tday).update(bal=tbal)
 
             #Update Teller Transaction History
 
             tdata = {
-                "user_id": t_bal.user_id,
+                "teller": t_bal.user_id,
                 "tellerId": t_bal.tellerId,
                 "transAmount": amt,
                 "transAccount": acctNo,
@@ -640,6 +645,7 @@ def operate(request):
                 "transDate": tday,
                 "transAmount": amt,
                 "senderName": senderName,
+                "txn_type": "CR",
                 "receiverName": c_acct.accountName,
                 "receiverAccount": acctNo,
                 "comment": comment
@@ -658,10 +664,12 @@ def operate(request):
             #print(message.sid)
         else:
             if amt > c_acct.workingBalance:
-                error = {
-                    "message": "Insufficient Balance"
+                data = {
+                    "code": status.HTTP_401_UNAUTHORIZED,
+                    "success": False,
+                    "message":"Insufficient Balance"
                 }
-                return Response(data=error, status=status.HTTP_401_UNAUTHORIZED)
+                return Response(data=data, status=status.HTTP_401_UNAUTHORIZED)
             else:
                 # Get Customer Balance
 
@@ -675,12 +683,12 @@ def operate(request):
 
                 #Update Teller Balance
                 tbal = t_bal.bal - amt
-                TellerBalance.objects.filter(tellerId=tellerId, openDate=tday).update(bal=tbal)
+                TellerBalance.objects.filter(tellerId=staffId, openDate=tday).update(bal=tbal)
 
                 #Update Teller Transaction History
 
                 tdata = {
-                    "user_id": t_bal.user_id,
+                    "teller": t_bal.user_id,
                     "tellerId": t_bal.tellerId,
                     "transAmount": amt,
                     "transAccount": acctNo,
@@ -698,6 +706,7 @@ def operate(request):
                     "transDate": tday,
                     "transAmount": amt,
                     "senderName": senderName,
+                    "txn_type": "DR",
                     "receiverName": c_acct.accountName,
                     "receiverAccount": acctNo,
                     "comment": comment
@@ -710,10 +719,12 @@ def operate(request):
             # from_="+12018906990",
             # body=f'Acct: {ac_rp} \n Ref: {tranId}\n TranType: DR \n Amount: {amt}\n Date: {tday}\n From: {senderName}\n ThankYou for Banking with Us')
 
-        suc = {
-            "message": "Transaction Successful"
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message":"successfull"
         }
-        return Response(data=suc, status=status.HTTP_200_OK)
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -1400,3 +1411,40 @@ def deleteCurrency(request, code):
             "message":" Currency deleted"
         }
         return Response(data=data, status=status.HTTP_200_OK)
+
+
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def setDefaultCurrency(request):
+    cur_code = request.data.get('currencyCode')
+    if request.user.is_superuser == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Bad Request/Permission Denied"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif Currency.objects.filter(cur_code=cur_code).exists() == False:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": "Invalid Currency Code"
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    elif Currency.objects.filter(cur_code=cur_code, active=True).exists() == True:
+        data = {
+            "code": status.HTTP_400_BAD_REQUEST,
+            "success": False,
+            "message": f'{cur_code} is the default Currency'
+        }
+        return Response(data=data, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        Currency.objects.filter(active=True).update(active=False)
+        Currency.objects.filter(cur_code=cur_code).update(active=True)
+        data = {
+            "code": status.HTTP_200_OK,
+            "success": True,
+            "message":"Default Currency Updated"
+        }
+        return Response(data=data, status=status.HTTP_200_OK)
+    

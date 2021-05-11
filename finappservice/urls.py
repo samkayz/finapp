@@ -45,4 +45,5 @@ urlpatterns = [
     path('addCurrency', views.addCurrency),
     path('allCurrency', views.allCurrency),
     path('deleteCurrency/<code>', views.deleteCurrency),
+    path('setDefaultCurrency', views.setDefaultCurrency),
 ]

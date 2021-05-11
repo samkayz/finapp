@@ -56,7 +56,7 @@ def checkLoanExpiringDate():
             
             newapp.UpdateInternalAccountBal(loans.loan_code, amount, loans.accountNumber, comment='Loan Repayment')
             
-            newapp.createLog(amount, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment')
+            newapp.createLog(amount, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment', txn_type='DR')
             pass
         
         else: 
@@ -72,7 +72,7 @@ def checkLoanExpiringDate():
             updateAccount.update(previousBalance=account_detail.workingBalance, workingBalance=bal)
             
             newapp.UpdateInternalAccountBal(loans.loan_code, loans.loanBal, loans.accountNumber, comment='Loan Repayment')
-            newapp.createLog(loans.loanBal, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment')
+            newapp.createLog(loans.loanBal, loans.customerName, loans.accountNumber, receiverName='Loan Repayment', receiverAccount='Loan Repayment', comment='Loan Repayment', txn_type='DR')
             pass
             
         

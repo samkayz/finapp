@@ -157,6 +157,7 @@ class TransactionHistory(models.Model):
     transDate = models.DateTimeField(auto_now=True)
     transAmount = models.FloatField()
     senderName = models.CharField(max_length=255, blank=True)
+    txn_type = models.TextField(null=True, blank=True)
     senderAccount = models.CharField(max_length=255, blank=True)
     receiverName = models.CharField(max_length=255, blank=True)
     receiverAccount = models.CharField(max_length=255, blank=True)
@@ -198,7 +199,7 @@ class TellerBalance(models.Model):
 
 
 class TellerTransactionHistory(models.Model):
-    teller = models.OneToOneField(User, on_delete=models.CASCADE)
+    teller = models.ForeignKey(User, on_delete=models.CASCADE)
     transAmount = models.FloatField()
     transAccount = models.CharField(max_length=100)
     transType = models.CharField(max_length=100)

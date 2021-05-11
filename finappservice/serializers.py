@@ -41,6 +41,13 @@ class AccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = Account
         fields = ['customerId', 'mnemonic', 'accounNumber', 'previousBalance', 'workingBalance', 'accountType', 'active']
+        
+
+class AccountCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Account
+        fields = ['customerId', 'mnemonic', 'accounNumber', 'previousBalance', 'workingBalance', 'accountType', 'accountTypeId', 'active', 'customer', 'createdBy', 'accountName']
+
 
 
 class ViewCustomerAccountsSerializer(serializers.ModelSerializer):
